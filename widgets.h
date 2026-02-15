@@ -5,13 +5,12 @@
 #include <stdbool.h>
 
 typedef struct window {
-  GtkApplication *app;
   char *title;
   int width;
   int height;
   bool maximized;
 } Window;
 
-GtkWidget *create_window(Window *win);
+GtkWidget *create_window(GtkApplication *app, Window *config);
 
 #endif
