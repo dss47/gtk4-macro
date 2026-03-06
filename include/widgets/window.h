@@ -1,0 +1,31 @@
+#ifndef GTK_WRAPPER_WINDOW_H
+#define GTK_WRAPPER_WINDOW_H
+
+#include <gtk/gtk.h>
+#include <stdbool.h>
+
+#include "common.h"
+
+typedef struct {
+    const char *title;
+    const char *icon_name;
+    const char *widget_name;
+    const char *background_color;
+    const char *background_image_path;
+    int default_width;
+    int default_height;
+    int min_width;
+    int min_height;
+    int max_width;
+    int max_height;
+    bool resizable;
+    bool decorated;
+    bool modal;
+    bool maximized;
+    bool present_on_create;
+    widget_style_config style;
+} window_config;
+
+GtkWidget *create_window(GtkApplication *app, const window_config *config);
+
+#endif
