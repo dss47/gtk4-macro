@@ -1,21 +1,23 @@
-name: Compile rapport
+  name: Compile rapport
 
-on: [push, pull_request]
+  on: [push, pull_request]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+  jobs:
+    build:
+      runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+      steps:
+        - uses: actions/checkout@v4
 
-      - name: Run Makefile
-        uses: xu-cheng/latex-action@v4
-        with:
-          run: cd report && make
+        - name: Run Makefile
+          uses: xu-cheng/texlive-action@v3
+          with:            
+            run: 
+              |
+              cd report && make
 
-      - name: Upload PDF
-        uses: actions/upload-artifact@v4
-        with:
-          name: report
-          path: report/build/main.pdf
+        - name: Upload PDF
+          uses: actions/upload-artifact@v4
+          with:
+            name: report
+            path: report/build/main.pdf
