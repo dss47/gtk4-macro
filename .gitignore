@@ -63,3 +63,26 @@ build/
 compile_commands.json
 
 .vscode/settings.json
+gtk-main-demos-gtk-demo
+
+docs
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.toc
+*.bbl
+*.blg
+*.synctex
+*.fls
+*.fdb_latexmk
+*.nav
+*.snm
+*.out
+
+report/build/
+report/*.aux
+report/*.out
+report/*.fdb_latexmk
+report/*.fls
+report/*.toc
