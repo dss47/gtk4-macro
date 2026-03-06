@@ -63,3 +63,6 @@ build/
 compile_commands.json
 
 .vscode/settings.json
+gtk-main-demos-gtk-demo
+
+docs
