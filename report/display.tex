@@ -1,0 +1,124 @@
+\section{Éléments d'affichage (Display)}
+
+\subsection{Structure \texttt{label\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    const char *text;
+    bool selectable;
+    bool wrap;
+    PangoEllipsizeMode ellipsize;
+    int max_width_chars;
+    widget_style_config style;
+} label_config;
+\end{lstlisting}
+
+\subsection{Description des champs (Label)}
+\begin{center}
+\begin{tabular}{|l|l|p{5cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+text & const char* & Texte à afficher \\
+\hline
+selectable & bool & Permet la sélection du texte par l'utilisateur \\
+\hline
+wrap & bool & Retour à la ligne automatique \\
+\hline
+ellipsize & PangoEllipsizeMode & Mode de troncature si le texte est trop long \\
+\hline
+max\_width\_chars & int & Largeur maximale en caractères \\
+\hline
+style & widget\_style\_config & Configuration du style \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Structure \texttt{image\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    const char *icon_name;
+    const char *file_path;
+    int pixel_size;
+    bool keep_aspect;
+    widget_style_config style;
+} image_config;
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{|l|l|p{5cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+icon\_name & const char* & Nom de l'icône du thème système \\
+\hline
+file\_path & const char* & Chemin d'accès vers le fichier image \\
+\hline
+pixel\_size & int & Taille de l'image en pixels \\
+\hline
+keep\_aspect & bool & Conserve les proportions de l'image \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Exemple d'utilisation}
+\begin{lstlisting}[language=C]
+#include "display.h"
+
+void create_display_elements(GtkWidget *box) {
+    label_config lbl = {
+        .text = "Bonjour GTK4",
+        .selectable = true,
+        .style = { .margin_top = 10 }
+    };
+    gtk_box_append(GTK_BOX(box), create_label(&lbl));
+}
+\end{lstlisting}
+\subsection{Structure \texttt{progress\_bar\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    double fraction;
+    const char *text;
+    GtkOrientation orientation;
+    bool show_text;
+    bool inverted;
+    bool pulse_once;
+    widget_style_config style;
+} progress_bar_config;
+\end{lstlisting}
+\begin{center}
+\begin{tabular}{|l|l|p{5cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+fraction & double & Niveau de progression (0.0 à 1.0) \\
+\hline
+text & const char* & Texte superposé sur la barre \\
+\hline
+show\_text & bool & Affiche ou masque le texte \\
+\hline
+inverted & bool & Inverse le sens de progression \\
+\hline
+pulse\_once & bool & Active le mode indéterminé (va-et-vient) \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Structure \texttt{spinner\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    int size;
+    bool spinning;
+    widget_style_config style;
+} spinner_config;
+\end{lstlisting}
+\begin{center}
+\begin{tabular}{|l|l|>{\raggedright\arraybackslash}p{6cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+size & int & Taille du spinner en pixels \\
+\hline
+spinning & bool & Active ou désactive l'animation \\
+\hline
+\end{tabular}
+\end{center}

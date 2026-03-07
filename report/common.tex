@@ -1,0 +1,57 @@
+\section{Structure \texttt{widget\_style\_config}}
+
+La structure \texttt{widget\_style\_config} est la fondation visuelle du wrapper. Elle est intégrée dans presque toutes les autres structures pour gérer le CSS, les marges, l'alignement et l'expansion.
+
+\subsection{Définition}
+
+\begin{lstlisting}[language=C]
+typedef struct {
+    const char *css_class;
+    const char **css_classes;
+    int width_request;
+    int height_request;
+    int margin_top;
+    int margin_bottom;
+    int margin_start;
+    int margin_end;
+    GtkAlign halign;
+    GtkAlign valign;
+    bool set_halign;
+    bool set_valign;
+    bool set_hexpand;
+    bool set_vexpand;
+    bool set_sensitive;
+    bool set_visible;
+    bool hexpand;
+    bool vexpand;
+    bool sensitive;
+    bool visible;
+    const char *tooltip;
+} widget_style_config;
+\end{lstlisting}
+
+\subsection{Description des champs principaux}
+
+\begin{center}
+\begin{tabular}{|l|l|>{\raggedright\arraybackslash}p{6cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+css\_class(es) & const char* & Classe(s) CSS à appliquer \\
+\hline
+width/height\_request & int & Dimensions minimales requises \\
+\hline
+margin\_* & int & Marges (haut, bas, début, fin) \\
+\hline
+halign/valign & GtkAlign & Alignement (START, CENTER, END, FILL) \\
+\hline
+hexpand/vexpand & bool & Le widget occupe-t-il l'espace libre ? \\
+\hline
+sensitive & bool & Widget interactif ou grisé \\
+\hline
+visible & bool & Visibilité du widget \\
+\hline
+tooltip & const char* & Texte d'infobulle au survol \\
+\hline
+\end{tabular}
+\end{center}

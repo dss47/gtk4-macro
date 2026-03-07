@@ -1,0 +1,22 @@
+\section{Séparateurs (Separator)}
+
+\subsection{Structure \texttt{separator\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    GtkOrientation orientation;
+    widget_style_config style;
+} separator_config;
+\end{lstlisting}
+
+\subsection{Description des champs}
+\begin{center}
+\begin{tabular}{|l|l|>{\raggedright\arraybackslash}p{6cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+orientation & GtkOrientation & \texttt{GTK\_ORIENTATION\_HORIZONTAL} ou \texttt{VERTICAL} \\
+\hline
+style & widget\_style\_config & Configuration (marges, CSS) \\
+\hline
+\end{tabular}
+\end{center}

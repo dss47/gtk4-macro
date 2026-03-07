@@ -1,0 +1,61 @@
+\section{Menus et Navigation (Menu)}
+
+\subsection{Structures \texttt{menu\_item\_config} et \texttt{menubar\_config}}
+\begin{lstlisting}[language=C]
+typedef struct menu_item_config {
+    const char *label;
+    menu_item_kind kind;
+    const struct menu_item_config *children;
+    size_t child_count;
+    bool enabled;
+    menu_item_callback on_activate;
+    gpointer user_data;
+} menu_item_config;
+
+typedef struct {
+    const menu_section_config *sections;
+    size_t section_count;
+    GActionMap *action_map;
+    menu_layout_mode layout;
+    bool show_arrow_indicators;
+    widget_style_config style;
+} menubar_config;
+\end{lstlisting}
+
+\subsection{Description des champs principaux}
+\begin{center}
+\begin{tabular}{|l|l|p{5cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+kind & menu\_item\_kind & Type (Action, Sous-menu, Section) \\
+\hline
+children & menu\_item\_config* & Sous-éléments du menu \\
+\hline
+on\_activate & callback & Fonction appelée au clic \\
+\hline
+layout & menu\_layout\_mode & Horizontal ou Vertical \\
+\hline
+\end{tabular}
+\end{center}
+\subsection{Structure \texttt{menu\_section\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    const char *label;
+    const menu_item_config *items;
+    size_t item_count;
+} menu_section_config;
+\end{lstlisting}
+\begin{center}
+\begin{tabular}{|l|l|>{\raggedright\arraybackslash}p{6cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+label & const char* & Titre de la section (optionnel) \\
+\hline
+items & menu\_item\_config* & Tableau des éléments du menu pour cette section \\
+\hline
+item\_count & size\_t & Nombre d'éléments dans la section \\
+\hline
+\end{tabular}
+\end{center}

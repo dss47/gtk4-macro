@@ -1,0 +1,33 @@
+\section{Saisie de date (Date)}
+
+\subsection{Structure \texttt{calendar\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    GDateTime *selected_date;
+    bool show_day_names;
+    bool show_week_numbers;
+    bool no_month_change;
+    widget_style_config style;
+    void (*on_day_selected)(GtkCalendar *calendar, gpointer user_data);
+    gpointer user_data;
+} calendar_config;
+\end{lstlisting}
+
+\subsection{Description des champs}
+\begin{center}
+\begin{tabular}{|l|l|>{\raggedright\arraybackslash}p{6cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+selected\_date & GDateTime* & Date sélectionnée par défaut \\
+\hline
+show\_day\_names & bool & Affiche les en-têtes des jours (Lun, Mar...) \\
+\hline
+show\_week\_numbers & bool & Affiche les numéros de semaine \\
+\hline
+no\_month\_change & bool & Empêche l'utilisateur de changer de mois \\
+\hline
+on\_day\_selected & callback & Fonction appelée lors du clic sur un jour \\
+\hline
+\end{tabular}
+\end{center}

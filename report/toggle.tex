@@ -1,0 +1,56 @@
+\section{Boutons d'état (Toggle)}
+
+\subsection{Structure \texttt{checkbox\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    const char *label;
+    bool active;
+    bool inconsistent;
+    widget_style_config style;
+    void (*on_toggled)(GtkCheckButton *button, gpointer user_data);
+    gpointer user_data;
+} checkbox_config;
+\end{lstlisting}
+
+\subsection{Description des champs (Checkbox)}
+\begin{center}
+\begin{tabular}{|l|l|p{5cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+label & const char* & Texte à côté de la case à cocher \\
+\hline
+active & bool & État coché (\texttt{true}) ou décoché (\texttt{false}) \\
+\hline
+inconsistent & bool & État indéterminé (souvent un tiret) \\
+\hline
+on\_toggled & callback & Fonction appelée lors du changement d'état \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Structure \texttt{switch\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    const char *label;
+    bool active;
+    bool state;
+    widget_style_config style;
+    void (*on_active_changed)(GtkSwitch *sw, GParamSpec *pspec, gpointer user_data);
+    gpointer user_data;
+} switch_config;
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{|l|l|>{\raggedright\arraybackslash}p{6cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+active & bool & Position de l'interrupteur (On/Off) \\
+\hline
+state & bool & État logique de l'interrupteur \\
+\hline
+on\_active\_changed & callback & Fonction appelée quand la position change \\
+\hline
+\end{tabular}
+\end{center}

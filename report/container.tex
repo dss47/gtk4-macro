@@ -1,0 +1,95 @@
+\section{Structures de Conteneurs (Containers)}
+
+Les conteneurs permettent d'organiser les widgets dans l'interface. L'API propose des structures pour \texttt{GtkBox}, \texttt{GtkGrid} et \texttt{GtkStack}.
+
+\subsection{Structure \texttt{box\_config}}
+
+\begin{lstlisting}[language=C]
+typedef struct {
+    GtkOrientation orientation;
+    int spacing;
+    bool homogeneous;
+    widget_style_config style;
+} box_config;
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{|l|l|p{5cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+orientation & GtkOrientation & \texttt{GTK\_ORIENTATION\_HORIZONTAL} ou \texttt{VERTICAL} \\
+\hline
+spacing & int & Espace en pixels entre les enfants \\
+\hline
+homogeneous & bool & Si \texttt{true}, tous les enfants ont la même taille \\
+\hline
+style & widget\_style\_config & Configuration de base du widget \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Structure \texttt{grid\_config}}
+
+\begin{lstlisting}[language=C]
+typedef struct {
+    int column_spacing;
+    int row_spacing;
+    bool homogeneous_columns;
+    bool homogeneous_rows;
+    widget_style_config style;
+} grid_config;
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{|l|l|p{5cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+column/row\_spacing & int & Espace entre les colonnes et les lignes \\
+\hline
+homogeneous\_* & bool & Force les colonnes/lignes à être de taille égale \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Exemple d'utilisation (Box)}
+
+\begin{lstlisting}[language=C]
+#include "container.h"
+
+void create_layout(GtkWidget *parent) {
+    box_config my_box = {
+        .orientation = GTK_ORIENTATION_VERTICAL,
+        .spacing = 10,
+        .homogeneous = false,
+        .style = { .margin_top = 15, .margin_bottom = 15 }
+    };
+    
+    GtkWidget *box = create_box(&my_box);
+    // gtk_box_append(GTK_BOX(parent), box);
+}
+\end{lstlisting}
+\subsection{Structure \texttt{stack\_config}}
+\begin{lstlisting}[language=C]
+typedef struct {
+    GtkStackTransitionType transition;
+    guint duration_ms;
+    bool vhomogeneous;
+    bool hhomogeneous;
+    widget_style_config style;
+} stack_config;
+\end{lstlisting}
+\begin{center}
+\begin{tabular}{|l|l|>{\raggedright\arraybackslash}p{6cm}|}
+\hline
+\textbf{Champ} & \textbf{Type} & \textbf{Description} \\
+\hline
+transition & GtkStackTransitionType & Type d'animation de transition \\
+\hline
+duration\_ms & guint & Durée de l'animation en millisecondes \\
+\hline
+vhomogeneous / hhomogeneous & bool & Force les pages à avoir la même hauteur/largeur \\
+\hline
+\end{tabular}
+\end{center}
