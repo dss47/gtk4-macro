@@ -1,105 +1,132 @@
-\section{Module \texttt{dialog.c}}
+\documentclass[12pt,a4paper]{report}
 
-Le module \texttt{dialog.c} implémente les boîtes d'alerte asynchrones. Il s'appuie sur \texttt{GtkAlertDialog}, qui ne bloque pas l'exécution du programme et impose donc un traitement différé de la réponse utilisateur.
+% --- PACKAGES ---
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{geometry}
 
-\subsection{Callback interne \texttt{on\_alert\_response}}
+\geometry{margin=2.5cm}
 
-Cette fonction récupère le résultat asynchrone, transforme une éventuelle erreur en indice \texttt{-1}, puis transmet la réponse au callback utilisateur avant de libérer les ressources temporaires.
+% --- COULEURS ---
+\definecolor{dialog-purple}{rgb}{0.5, 0.0, 0.5}
+\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
 
-\begin{lstlisting}[language=C]
-static void on_alert_response(GObject *source_object, GAsyncResult *result, gpointer user_data) {
-    (void)source_object;
-    alert_async_context *ctx = user_data;
-    GError *error = NULL;
-    int index = gtk_alert_dialog_choose_finish(ctx->dialog, result, &error);
-    if (error != NULL) {
-        g_error_free(error);
-        index = -1;
-    }
-    if (ctx->on_response != NULL) {
-        ctx->on_response(index, ctx->user_data);
-    }
-    g_object_unref(ctx->dialog);
-    g_free(ctx);
+% --- STYLE DES BOITES (Design corrigé pour Yahya) ---
+\newtcolorbox{dialogbox}[1]{
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    colback=white,
+    colframe=dialog-purple,
+    fonttitle=\bfseries,
+    colbacktitle=dialog-purple,
+    title=#1,
+    boxed title style={size=small, sharp corners},
+    drop shadow,
+    bottom=2mm
 }
+
+% --- CONFIGURATION C ---
+\lstset{
+    language=C,
+    backgroundcolor=\color{code-bg},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{purple},
+    breaklines=true,
+    frame=none,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+\begin{document}
+
+\chapter{Module de Boîtes de Dialogue (Dialogs)}
+
+\section{Introduction}
+Les boîtes de dialogue sont essentielles pour confirmer des actions critiques (comme la suppression d'un trajet dans le \textit{Smart Transport Scheduler}). Ce module utilise l'API moderne de GTK4 pour afficher des alertes sans geler l'interface utilisateur.
+
+\section{Structures de Configuration}
+
+\begin{dialogbox}{Structure : alert\_dialog\_config}
+Cette structure contient tout le nécessaire pour construire une alerte : le message principal, les détails secondaires, et surtout un tableau de boutons personnalisables.
+\end{dialogbox}
+
+\begin{lstlisting}
+typedef struct {
+    GtkWindow *parent;
+    const char *message;
+    const char *detail;
+    const alert_button_config *buttons;
+    size_t button_count;
+    int default_button;
+    int cancel_button;
+    bool modal;
+    void (*on_response)(int response_index, gpointer user_data);
+    gpointer user_data;
+} alert_dialog_config;
 \end{lstlisting}
 
-\subsection{Fonction \texttt{show\_alert\_dialog}}
+\section{Macros et Valeurs par Défaut}
 
-La fonction publique configure le message, les détails, la modalité et la liste des boutons. Elle déduit aussi le bouton par défaut et le bouton d'annulation à partir de la configuration avant d'afficher le dialogue en mode synchrone visuel mais asynchrone du point de vue du code.
+\begin{dialogbox}{Macro : ALERT\_DIALOG\_CONFIG\_DEFAULT}
+Pour simplifier la vie du développeur, cette macro initialise une alerte "vide" mais sécurisée. Par défaut, la fenêtre est modale (elle bloque l'interaction avec la fenêtre parente jusqu'à sa fermeture).
+\end{dialogbox}
 
-\begin{lstlisting}[language=C]
+\begin{lstlisting}
+#define ALERT_DIALOG_CONFIG_DEFAULT ((alert_dialog_config){ \
+    .parent = NULL, \
+    .message = NULL, \
+    .modal = true, \
+    .default_button = -1, \
+    .cancel_button = -1, \
+    // ... initialisation du reste a zero ...
+})
+\end{lstlisting}
+
+\section{Gestion de l'Asynchronisme}
+
+\begin{dialogbox}{Le Contexte : alert\_async\_context}
+Comme GTK4 fonctionne de manière asynchrone, nous devons créer une petite structure "tampon" pour garder en mémoire les informations de l'utilisateur pendant qu'il choisit son bouton.
+\end{dialogbox}
+
+\begin{lstlisting}
+typedef struct {
+    GtkAlertDialog *dialog;
+    void (*on_response)(int response_index, gpointer user_data);
+    gpointer user_data;
+} alert_async_context;
+\end{lstlisting}
+
+\section{Implémentation de l'Affichage}
+
+\begin{dialogbox}{Fonction : show\_alert\_dialog}
+C'est la fonction principale. Elle transforme notre configuration en un objet \texttt{GtkAlertDialog}. Si une fonction \texttt{on\_response} est fournie, elle prépare le rappel (callback) pour traiter le clic de l'utilisateur.
+\end{dialogbox}
+
+\begin{lstlisting}
 void show_alert_dialog(const alert_dialog_config *config) {
     GtkAlertDialog *dialog;
-    const char **buttons;
-
-    if (config == NULL || config->message == NULL) {
-        return;
-    }
-
     dialog = gtk_alert_dialog_new("%s", config->message);
-    if (config->detail != NULL) {
-        gtk_alert_dialog_set_detail(dialog, config->detail);
-    }
-    gtk_alert_dialog_set_modal(dialog, config->modal);
-
-    if (config->button_count > 0 && config->buttons != NULL) {
-        buttons = g_new0(const char *, config->button_count + 1);
-        for (size_t i = 0; i < config->button_count; i++) {
-            buttons[i] = config->buttons[i].label;
-        }
-        gtk_alert_dialog_set_buttons(dialog, buttons);
-        g_free(buttons);
-    }
-
-    int default_button = config->default_button;
-    int cancel_button = config->cancel_button;
-
-    if (config->buttons != NULL && config->button_count > 0) {
-        for (size_t i = 0; i < config->button_count; i++) {
-            const char *appearance = config->buttons[i].appearance;
-            if (appearance == NULL) {
-                continue;
-            }
-            if (default_button < 0 && strcmp(appearance, "suggested") == 0) {
-                default_button = (int)i;
-            }
-            if (cancel_button < 0 && strcmp(appearance, "cancel") == 0) {
-                cancel_button = (int)i;
-            }
-        }
-    }
-
+    
+    // Configuration des boutons et du focus
     if (default_button >= 0) {
         gtk_alert_dialog_set_default_button(dialog, default_button);
     }
-    if (cancel_button >= 0) {
-        gtk_alert_dialog_set_cancel_button(dialog, cancel_button);
-    }
 
+    // Lancement de l'alerte
     if (config->on_response != NULL) {
-        alert_async_context *ctx = g_new0(alert_async_context, 1);
-        ctx->dialog = g_object_ref(dialog);
-        ctx->on_response = config->on_response;
-        ctx->user_data = config->user_data;
+        // Mode asynchrone avec callback
         gtk_alert_dialog_choose(dialog, config->parent, NULL, on_alert_response, ctx);
     } else {
+        // Simple affichage informatif
         gtk_alert_dialog_show(dialog, config->parent);
     }
-
-    g_object_unref(dialog);
 }
 \end{lstlisting}
 
-\subsection{APIs GTK utilisées}
-
-\begin{itemize}
-    \item \textbf{\texttt{gtk\_alert\_dialog\_new()}} : Instancie un nouvel objet de dialogue d'alerte en acceptant une chaîne de format pour le message principal. Elle est systématiquement appelée au début de \texttt{show\_alert\_dialog} pour définir le cœur de l'information à transmettre.
-    \item \textbf{\texttt{gtk\_alert\_dialog\_set\_buttons()}} : Assigne un tableau de libellés aux boutons qui seront présentés à l'utilisateur. Le wrapper convertit sa liste interne de structures de boutons vers ce format simple attendu par GTK4.
-    \item \textbf{\texttt{gtk\_alert\_dialog\_set\_default\_button()}} : Désigne l'indice du bouton qui doit répondre à l'activation par défaut (touche Entrée). Cela permet d'améliorer l'ergonomie en mettant en avant l'action la plus probable ou la plus sûre.
-    \item \textbf{\texttt{gtk\_alert\_dialog\_choose()}} : Lance l'affichage du dialogue de manière non bloquante et enregistre un callback pour le futur. Elle est essentielle pour le fonctionnement asynchrone du wrapper, permettant à l'application de continuer à tourner pendant que le dialogue est ouvert.
-    \item \textbf{\texttt{gtk\_alert\_dialog\_choose\_finish()}} : Extrait le résultat de l'interaction (l'indice du bouton cliqué) à partir de l'objet de résultat asynchrone. Elle est invoquée dans \texttt{on\_alert\_response} pour clore proprement le cycle de vie du dialogue.
-    \item \textbf{\texttt{gtk\_alert\_dialog\_show()}} : Affiche le dialogue à l'écran sans mettre en place de mécanisme de capture de la réponse. Le module y a recours pour les simples alertes informatives où seule la fermeture manuelle par l'utilisateur compte.
-\end{itemize}
-
-\newpage
+\end{document}

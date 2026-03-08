@@ -1,7 +1,7 @@
 \documentclass[12pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{babel}
+\usepackage[french]{babel}
 \usepackage{hyperref}
 \usepackage{listings}
 \usepackage{xcolor}
@@ -32,7 +32,20 @@
     numbersep=8pt,
     captionpos=b,
     tabsize=4,
-    showstringspaces=false
+    showstringspaces=false,
+    extendedchars=true,
+    columns=fullflexible,
+    literate=
+        {é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {ë}{{\"e}}1
+        {É}{{\'E}}1 {È}{{\`E}}1 {Ê}{{\^E}}1 {Ë}{{\"E}}1
+        {à}{{\`a}}1 {â}{{\^a}}1 {ä}{{\"a}}1
+        {À}{{\`A}}1 {Â}{{\^A}}1 {Ä}{{\"A}}1
+        {ù}{{\`u}}1 {û}{{\^u}}1 {ü}{{\"u}}1
+        {Ù}{{\`U}}1 {Û}{{\^U}}1 {Ü}{{\"U}}1
+        {ô}{{\^o}}1 {ö}{{\"o}}1 {Ô}{{\^O}}1 {Ö}{{\"O}}1
+        {ç}{{\c{c}}}1 {Ç}{{\c{C}}}1
+        {œ}{{\oe}}1 {Œ}{{\OE}}1
+        {’}{{'}}1
 }
 
 \lstset{style=cstyle}
@@ -52,7 +65,9 @@
 \section{Introduction}
 Ce rapport documente l'implémentation interne du wrapper GTK4. Contrairement au premier volume, centré sur les structures de configuration et l'usage de l'API, ce second document décrit la logique des fonctions, les appels GTK réellement utilisés et les choix techniques effectués dans chaque module.
 
-Les extraits de code présentés ici reprennent l'implémentation réelle du projet. Les commentaires ont été retirés dans les listings afin de conserver une compilation LaTeX simple et robuste tout en gardant un style visuel identique au premier rapport.
+Les extraits de code présentés ici sont basés sur l'implémentation réelle du projet. Les listings mettent l'accent sur les portions significatives (vérifications, branchements, gestion mémoire, raccordement des signaux) afin de conserver une lecture fluide dans le PDF.
+
+L'objectif de ce volume est donc double : (1) expliquer \emph{ce que fait} chaque fonction du wrapper et (2) expliciter \emph{comment} elle le fait, notamment en termes de compatibilité GTK, d'ownership GLib et de comportement par défaut lorsque la configuration est absente.
 
 \newpage
 

@@ -1,0 +1,103 @@
+\documentclass[12pt,a4paper]{report}
+
+% --- PACKAGES ---
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{geometry}
+
+\geometry{margin=2.5cm}
+
+% --- COULEURS ---
+\definecolor{theme-teal}{rgb}{0.12, 0.55, 0.48}
+\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
+
+% --- STYLE DES BOITES (Design sans chevauchement) ---
+\newtcolorbox{themebox}[1]{
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    colback=white,
+    colframe=theme-teal,
+    fonttitle=\bfseries,
+    colbacktitle=theme-teal,
+    title=#1,
+    boxed title style={size=small, sharp corners},
+    drop shadow,
+    bottom=2mm
+}
+
+% --- CONFIGURATION C ---
+\lstset{
+    language=C,
+    backgroundcolor=\color{code-bg},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{purple},
+    breaklines=true,
+    frame=none,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+\begin{document}
+
+\chapter{Module de Gestion du Thème (CSS Customization)}
+
+\section{Introduction}
+L'apparence d'une application professionnelle ne se limite pas aux widgets standard. Pour notre projet, nous utilisons le moteur CSS de GTK4 pour injecter des styles personnalisés. Ce module permet de définir des dégradés et des couleurs spécifiques pour les boutons d'action (Primaire, Succès, Danger).
+
+\section{Interface du Module (Header)}
+
+\begin{themebox}{Fichier : theme.h}
+L'interface est minimaliste : une seule fonction publique permet d'activer le thème sur l'ensemble de l'application.
+\end{themebox}
+
+\begin{lstlisting}
+#ifndef GTK_WRAPPER_THEME_H
+#define GTK_WRAPPER_THEME_H
+
+#include <gtk/gtk.h>
+
+void apply_demo_theme(void);
+
+#endif
+\end{lstlisting}
+
+\section{Implémentation et Injection CSS}
+
+\begin{themebox}{Logique de Style : apply\_demo\_theme}
+Cette fonction crée un \texttt{GtkCssProvider}. Ce "fournisseur" de style lit une chaîne de caractères contenant du code CSS pur. Les classes définies ici (ex: \texttt{.btn-primary}) sont ensuite liées aux widgets via la fonction \texttt{gtk\_widget\_add\_css\_class}.
+\end{themebox}
+
+\begin{lstlisting}
+void apply_demo_theme(void) {
+    GtkCssProvider *provider = gtk_css_provider_new();
+    const char *css =
+        ".btn-primary {"
+        "  background: linear-gradient(180deg, #1f8c7a, #176b5e);"
+        "  color: #ffffff;"
+        "}"
+        // ... autres styles pour success et danger ...
+        ;
+
+    gtk_css_provider_load_from_string(provider, css);
+    gtk_style_context_add_provider_for_display(
+        gdk_display_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
+    g_object_unref(provider);
+}
+\end{lstlisting}
+
+\section{Détails des Dégradés Linéaires}
+Les boutons utilisent des dégradés pour un aspect plus moderne. En mathématiques, la transition de couleur suit un vecteur directionnel de $180^\circ$ :
+\[ \text{Couleur}_{\text{bouton}} = \text{lerp}(\text{Couleur}_{\text{haut}}, \text{Couleur}_{\text{bas}}, \text{position}_y) \]
+
+
+
+\end{document}

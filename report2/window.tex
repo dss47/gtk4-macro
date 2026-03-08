@@ -1,113 +1,118 @@
-\section{Module \texttt{window.c}}
+\documentclass[12pt,a4paper]{report}
 
-Le module \texttt{window.c} construit les fenêtres principales de l'application. Il encapsule la création d'un \texttt{GtkApplicationWindow}, l'application des propriétés usuelles et la gestion d'un fond personnalisé par CSS.
+% --- PACKAGES ---
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{geometry}
 
-\subsection{Fonction \texttt{apply\_window\_background}}
+\geometry{margin=2.5cm}
 
-Cette fonction privée applique un style CSS ciblé sur une seule fenêtre. L'idée est de nommer le widget puis de générer dynamiquement une règle CSS qui peut définir soit une couleur de fond seule, soit une couleur combinée à une image.
+% --- COULEURS ---
+\definecolor{window-navy}{rgb}{0.1, 0.1, 0.5}
+\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
 
-\begin{lstlisting}[language=C]
+% --- STYLE DES BOITES (Design anti-chevauchement pour Yahya) ---
+\newtcolorbox{winbox}[1]{
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    colback=white,
+    colframe=window-navy,
+    fonttitle=\bfseries,
+    colbacktitle=window-navy,
+    title=#1,
+    boxed title style={size=small, sharp corners},
+    drop shadow,
+    bottom=2mm
+}
+
+% --- CONFIGURATION C ---
+\lstset{
+    language=C,
+    backgroundcolor=\color{code-bg},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{purple},
+    breaklines=true,
+    frame=none,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+\begin{document}
+
+\chapter{Gestion de la Fenêtre Principale (Windows)}
+
+\section{Introduction}
+La fenêtre est le composant racine de toute application GTK. Ce module permet de définir les propriétés fondamentales comme le titre, la taille par défaut et l'apparence visuelle (fond coloré ou image). Il utilise les capacités de \texttt{GtkApplicationWindow} pour une intégration parfaite dans l'environnement de bureau.
+
+\section{Configuration de la Fenêtre (Header)}
+
+\begin{winbox}{Structure : window\_config}
+La structure \texttt{window\_config} regroupe toutes les caractéristiques physiques de la fenêtre. Elle permet de définir si la fenêtre est redimensionnable ou modale, ainsi que ses contraintes de taille minimale et maximale.
+\end{winbox}
+
+\begin{lstlisting}
+typedef struct {
+    const char *title;
+    const char *icon_name;
+    const char *background_color;
+    const char *background_image_path;
+    int default_width;
+    int default_height;
+    bool resizable;
+    bool decorated;
+    bool modal;
+    widget_style_config style;
+} window_config;
+\end{lstlisting}
+
+\section{Logique de Personnalisation Visuelle}
+
+\begin{winbox}{Fonction : apply\_window\_background}
+Cette fonction utilise un \texttt{GtkCssProvider} pour injecter du CSS dynamiquement. Elle permet de définir une couleur de fond ou une image de fond avec la propriété \texttt{background-size: cover}, garantissant que l'image remplit toute la fenêtre.
+\end{winbox}
+
+\begin{lstlisting}
 static void apply_window_background(const window_config *config, GtkWidget *window) {
-    if (config == NULL || window == NULL || config->background_color == NULL || config->background_color[0] == '\0') {
-        return;
-    }
-
-    const char *name = config->widget_name;
-    if (name == NULL || name[0] == '\0') {
-        name = "wrapper-window";
-        gtk_widget_set_name(window, name);
-    }
-
+    // ... Verification des parametres ...
     GtkCssProvider *provider = gtk_css_provider_new();
-    char *css;
-
-    if (config->background_image_path != NULL && config->background_image_path[0] != '\0') {
-        css = g_strdup_printf(
-            "window#%s, window#%s > * {"
-            "background-color: %s;"
-            "background-image: url('%s');"
-            "background-size: cover;"
-            "background-position: center;"
-            "}",
-            name,
-            name,
-            config->background_color,
-            config->background_image_path
-        );
-    } else {
-        css = g_strdup_printf(
-            "window#%s, window#%s > * { background-color: %s; }",
-            name,
-            name,
-            config->background_color
-        );
-    }
-
-    gtk_css_provider_load_from_string(provider, css);
-    gtk_style_context_add_provider_for_display(
-        gtk_widget_get_display(window),
-        GTK_STYLE_PROVIDER(provider),
-        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    char *css = g_strdup_printf(
+        "window#%s { background-image: url('%s'); background-size: cover; }",
+        name, config->background_image_path
     );
-
-    g_free(css);
-    g_object_unref(provider);
+    gtk_css_provider_load_from_string(provider, css);
+    // ... Application du style au display ...
 }
 \end{lstlisting}
 
-\subsection{Fonction \texttt{create\_window}}
+\section{Construction de la Fenêtre}
 
-La fonction principale du module instancie la fenêtre, applique les propriétés déclarées dans \texttt{window\_config}, délègue la personnalisation visuelle à \texttt{apply\_window\_background} puis applique le style commun partagé avec les autres widgets.
+Pour calculer la surface $S$ disponible à l'écran en fonction des dimensions par défaut $w$ et $h$, on utilise simplement :
+$$S = w \times h$$
 
-\begin{lstlisting}[language=C]
+\begin{winbox}{Fonction : create\_window}
+C'est la fonction principale du module. Elle instancie la fenêtre liée à l'application et applique toutes les configurations (titre, icône, taille, et style CSS) avant de la présenter à l'écran.
+\end{winbox}
+
+\begin{lstlisting}
 GtkWidget *create_window(GtkApplication *app, const window_config *config) {
     GtkWidget *window = gtk_application_window_new(app);
-    if (config == NULL) {
-        return window;
-    }
+    if (config == NULL) return window;
 
-    if (config->title) {
-        gtk_window_set_title(GTK_WINDOW(window), config->title);
-    }
-    if (config->icon_name) {
-        gtk_window_set_icon_name(GTK_WINDOW(window), config->icon_name);
-    }
-    if (config->widget_name) {
-        gtk_widget_set_name(window, config->widget_name);
-    }
-
+    gtk_window_set_title(GTK_WINDOW(window), config->title);
     gtk_window_set_default_size(GTK_WINDOW(window), config->default_width, config->default_height);
-    gtk_window_set_resizable(GTK_WINDOW(window), config->resizable);
-    gtk_window_set_decorated(GTK_WINDOW(window), config->decorated);
-    gtk_window_set_modal(GTK_WINDOW(window), config->modal);
-
-    if (config->min_width > 0 || config->min_height > 0) {
-        gtk_widget_set_size_request(window, config->min_width, config->min_height);
-    }
-
+    
     apply_window_background(config, window);
     apply_widget_style(window, &config->style);
 
-    if (config->maximized) {
-        gtk_window_maximize(GTK_WINDOW(window));
-    }
-    if (config->present_on_create) {
-        gtk_window_present(GTK_WINDOW(window));
-    }
-
+    if (config->present_on_create) gtk_window_present(GTK_WINDOW(window));
     return window;
 }
 \end{lstlisting}
 
-\subsection{APIs GTK utilisées}
-
-\begin{itemize}
-    \item \textbf{\texttt{gtk\_application\_window\_new()}} : Crée une fenêtre principale intégrée au cycle de vie d'une \texttt{GtkApplication}. Le module l'utilise pour bénéficier de la gestion automatique des actions et de la fermeture de l'application.
-    \item \textbf{\texttt{gtk\_widget\_set\_name()}} : Assigne un identifiant unique (ID) au widget, utilisable comme sélecteur dans une feuille de style CSS. Le wrapper s'en sert pour cibler spécifiquement la fenêtre lors de l'application dynamique de thèmes personnalisés.
-    \item \textbf{\texttt{gtk\_css\_provider\_new()}} : Instancie un objet capable de lire et d'analyser des données CSS. Elle permet au module de transformer les paramètres de couleur et d'image de fond du wrapper en règles de style compréhensibles par le moteur de rendu de GTK.
-    \item \textbf{\texttt{gtk\_style\_context\_add\_provider\_for\_display()}} : Attache un fournisseur de style à l'ensemble de l'écran (display). Cette API est cruciale pour que les styles générés dynamiquement par le wrapper soient pris en compte par le moteur CSS de GTK lors du rendu de la fenêtre.
-    \item \textbf{\texttt{gtk\_window\_set\_default\_size()}} : Détermine les dimensions d'ouverture par défaut de la fenêtre. Elle est utilisée pour initialiser l'espace de travail de l'utilisateur selon les préconisations fournies dans la configuration.
-    \item \textbf{\texttt{gtk\_window\_present()}} : Rend la fenêtre visible et demande au gestionnaire de fenêtres de lui donner le focus. Le wrapper l'appelle systématiquement en fin de création pour garantir que l'utilisateur voit immédiatement l'interface générée.
-\end{itemize}
-
-\newpage
+\end{document}

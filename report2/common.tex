@@ -1,109 +1,110 @@
-\section{Module \texttt{common.c}}
+\documentclass[12pt,a4paper]{report}
 
-Le module \texttt{common.c} fournit la couche de style commune à l'ensemble du wrapper. Il évite la duplication de code en regroupant dans une seule fonction l'application des classes CSS, des marges, de l'alignement, de l'expansion et des métadonnées de confort comme l'infobulle.
+% --- PACKAGES ---
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{geometry}
 
-\subsection{Fonction \texttt{apply\_widget\_style}}
+\geometry{margin=2.5cm}
 
-La fonction \texttt{apply\_widget\_style} prend un widget GTK déjà créé et lui applique les attributs décrits dans \texttt{widget\_style\_config}. L'implémentation distingue bien les valeurs toujours appliquées, comme les marges, et les valeurs conditionnelles, pilotées par des indicateurs \texttt{set\_*}.
+% --- COULEURS ---
+\definecolor{gtk-blue}{rgb}{0.2, 0.4, 0.8}
+\definecolor{code-bg}{rgb}{0.97, 0.97, 0.97}
 
-\begin{lstlisting}[language=C]
+% --- STYLE DES BOITES (Correction du chevauchement) ---
+\newtcolorbox{docbox}[1]{
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    colback=white,
+    colframe=gtk-blue,
+    fonttitle=\bfseries,
+    colbacktitle=gtk-blue,
+    title=#1,
+    boxed title style={size=small, sharp corners},
+    drop shadow,
+    bottom=2mm
+}
+
+% --- CONFIGURATION C ---
+\lstset{
+    language=C,
+    backgroundcolor=\color{code-bg},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{purple},
+    breaklines=true,
+    frame=none
+}
+
+\begin{document}
+
+\chapter{Module de Style Commun (Common)}
+
+\section{Introduction}
+Ce module définit les bases de l'apparence visuelle de l'application. Au lieu de configurer manuellement chaque propriété GTK pour chaque widget, nous utilisons une structure de configuration centralisée. Cela permet de respecter les principes de programmation propre (DRY - Don't Repeat Yourself).
+
+\section{Structure de Données}
+
+\begin{docbox}{Structure : widget\_style\_config}
+Cette structure regroupe les propriétés de mise en page les plus courantes : les marges, l'alignement, l'expansion (hexpand/vexpand) et les classes CSS. Elle permet de définir le "look and feel" d'un composant de manière déclarative.
+\end{docbox}
+
+\begin{lstlisting}
+typedef struct {
+    const char *css_class;
+    const char **css_classes;
+    int width_request;
+    int height_request;
+    int margin_top;
+    int margin_bottom;
+    int margin_start;
+    int margin_end;
+    GtkAlign halign;
+    GtkAlign valign;
+    bool set_halign;
+    // ... expansion et visibilite ...
+    const char *tooltip;
+} widget_style_config;
+\end{lstlisting}
+
+\section{Macros de Sécurité}
+
+\begin{docbox}{Macro : WIDGET\_STYLE\_CONFIG\_DEFAULT}
+L'objectif est d'obtenir une configuration neutre (zéro-initialisée). En utilisant \texttt{\{0\}}, tous les pointeurs deviennent \texttt{NULL} et les entiers \texttt{0}, ce qui permet de ne modifier ensuite que les champs nécessaires.
+\end{docbox}
+
+\begin{lstlisting}
+#define WIDGET_STYLE_CONFIG_DEFAULT ((widget_style_config){0})
+\end{lstlisting}
+
+\section{Logique d'Application du Style}
+
+\begin{docbox}{Fonction : apply\_widget\_style}
+Cette fonction fait le pont entre notre structure personnalisée et l'API native de GTK4. Elle vérifie chaque champ de la structure et appelle les fonctions \texttt{gtk\_widget\_set\_*} correspondantes.
+\end{docbox}
+
+\begin{lstlisting}
 void apply_widget_style(GtkWidget *widget, const widget_style_config *style) {
-    if (widget == NULL || style == NULL) {
-        return;
-    }
+    if (widget == NULL || style == NULL) return;
 
+    // Gestion des classes CSS
     if (style->css_class && style->css_class[0] != '\0') {
         gtk_widget_add_css_class(widget, style->css_class);
     }
-    if (style->css_classes != NULL) {
-        for (int i = 0; style->css_classes[i] != NULL; i++) {
-            gtk_widget_add_css_class(widget, style->css_classes[i]);
-        }
-    }
 
+    // Gestion des dimensions et marges
     if (style->width_request != 0 || style->height_request != 0) {
         gtk_widget_set_size_request(widget, style->width_request, style->height_request);
     }
 
     gtk_widget_set_margin_top(widget, style->margin_top);
-    gtk_widget_set_margin_bottom(widget, style->margin_bottom);
-    gtk_widget_set_margin_start(widget, style->margin_start);
-    gtk_widget_set_margin_end(widget, style->margin_end);
-
-    if (style->set_halign) {
-        gtk_widget_set_halign(widget, style->halign);
-    }
-    if (style->set_valign) {
-        gtk_widget_set_valign(widget, style->valign);
-    }
-    if (style->set_hexpand) {
-        gtk_widget_set_hexpand(widget, style->hexpand);
-    }
-    if (style->set_vexpand) {
-        gtk_widget_set_vexpand(widget, style->vexpand);
-    }
-    if (style->set_sensitive) {
-        gtk_widget_set_sensitive(widget, style->sensitive);
-    }
-    if (style->set_visible) {
-        gtk_widget_set_visible(widget, style->visible);
-    }
-
-    if (style->tooltip && style->tooltip[0] != '\0') {
-        gtk_widget_set_tooltip_text(widget, style->tooltip);
-    }
+    // ... configuration des alignements et tooltips ...
 }
 \end{lstlisting}
 
-\subsection{Macros d'initialisation par défaut (\texttt{\_CONFIG\_DEFAULT})}
-
-Le wrapper expose désormais des macros d'initialisation par défaut dans les en-têtes (dossier \texttt{include/widgets/}).
-Leur objectif est de fournir une configuration \og sûre \fg{} et lisible, sans dépendre d'un \texttt{\{0\}} implicite, puis de ne surcharger que les champs utiles.
-
-Le style commun utilise :
-\begin{itemize}
-    \item \texttt{WIDGET\_STYLE\_CONFIG\_DEFAULT} (\texttt{include/widgets/common.h})
-\end{itemize}
-
-Chaque widget possédant une structure \texttt{*\_config} dispose d'une macro \texttt{*\_CONFIG\_DEFAULT} correspondante. Exemples principaux :
-\begin{itemize}
-    \item \texttt{BUTTON\_CONFIG\_DEFAULT}, \texttt{RADIO\_BUTTON\_CONFIG\_DEFAULT} (\texttt{include/widgets/button.h})
-    \item \texttt{GRID\_CONFIG\_DEFAULT}, \texttt{BOX\_CONFIG\_DEFAULT}, \texttt{STACK\_CONFIG\_DEFAULT} (\texttt{include/widgets/container.h})
-    \item \texttt{ENTRY\_CONFIG\_DEFAULT}, \texttt{DROPDOWN\_CONFIG\_DEFAULT}, \texttt{SPIN\_BUTTON\_CONFIG\_DEFAULT} (\texttt{include/widgets/input.h})
-    \item \texttt{CHECKBOX\_CONFIG\_DEFAULT}, \texttt{SWITCH\_CONFIG\_DEFAULT} (\texttt{include/widgets/toggle.h})
-    \item \texttt{PROGRESS\_BAR\_CONFIG\_DEFAULT}, \texttt{SPINNER\_CONFIG\_DEFAULT}, \texttt{LABEL\_CONFIG\_DEFAULT}, \texttt{IMAGE\_CONFIG\_DEFAULT} (\texttt{include/widgets/display.h})
-    \item \texttt{CALENDAR\_CONFIG\_DEFAULT} (\texttt{include/widgets/date.h})
-    \item \texttt{SEPARATOR\_CONFIG\_DEFAULT} (\texttt{include/widgets/separator.h})
-    \item \texttt{MENU\_ITEM\_CONFIG\_DEFAULT}, \texttt{MENU\_SECTION\_CONFIG\_DEFAULT}, \texttt{MENUBAR\_CONFIG\_DEFAULT} (\texttt{include/widgets/menu.h})
-    \item \texttt{WINDOW\_CONFIG\_DEFAULT} (\texttt{include/widgets/window.h})
-    \item \texttt{ALERT\_BUTTON\_CONFIG\_DEFAULT}, \texttt{ALERT\_DIALOG\_CONFIG\_DEFAULT} (\texttt{include/widgets/dialog.h})
-\end{itemize}
-
-\paragraph{Exemple d'utilisation}
-
-\begin{lstlisting}[language=C]
-button_config cfg = BUTTON_CONFIG_DEFAULT;
-cfg.label = "_Save";
-cfg.use_underline = true;
-cfg.theme_variant = "primary";
-cfg.icon_name = "document-save-symbolic";
-
-cfg.style = WIDGET_STYLE_CONFIG_DEFAULT;
-cfg.style.width_request = 180;
-cfg.style.height_request = 38;
-
-GtkWidget *btn = create_button(&cfg);
-\end{lstlisting}
-
-\subsection{APIs GTK utilisées}
-
-\begin{itemize}
-    \item \textbf{\texttt{gtk\_widget\_add\_css\_class()}} : Ajoute une classe de style CSS spécifiée au widget cible. Dans \texttt{apply\_widget\_style}, elle permet d'appliquer de manière dynamique une ou plusieurs classes CSS définies dans la configuration pour modifier l'apparence visuelle du widget.
-    \item \textbf{\texttt{gtk\_widget\_set\_size\_request()}} : Fixe les dimensions minimales (largeur et hauteur) que le widget doit tenter d'occuper. Le wrapper utilise cette fonction pour forcer une taille spécifique demandée par le développeur dans la structure \texttt{widget\_style\_config}.
-    \item \textbf{\texttt{gtk\_widget\_set\_margin\_top()}} (et variantes) : Définit les marges extérieures du widget pour chaque direction. Le module les exploite pour assurer un espacement cohérent entre les widgets sans avoir à manipuler directement les conteneurs parents.
-    \item \textbf{\texttt{gtk\_widget\_set\_halign()}} et \textbf{\texttt{gtk\_widget\_set\_valign()}} : Contrôlent l'alignement du widget respectivement sur les axes horizontal et vertical. Elles permettent au wrapper de gérer la position du widget (centré, aligné à gauche/droite, ou étendu) dans sa zone d'affichage.
-    \item \textbf{\texttt{gtk\_widget\_set\_hexpand()}} et \textbf{\texttt{gtk\_widget\_set\_vexpand()}} : Indiquent au gestionnaire de mise en page si le widget doit absorber l'espace supplémentaire disponible. Ces appels sont cruciaux pour définir le comportement de redimensionnement réactif des interfaces construites avec le wrapper.
-    \item \textbf{\texttt{gtk\_widget\_set\_tooltip\_text()}} : Associe un texte d'aide contextuelle qui apparaît lorsque l'utilisateur survole le widget avec la souris. Elle est systématiquement appelée par le module si une chaîne de caractères \texttt{tooltip} est fournie.
-\end{itemize}
-
-\newpage
+\end{document}

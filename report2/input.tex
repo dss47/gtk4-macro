@@ -1,99 +1,132 @@
-\section{Module \texttt{input.c}}
+\documentclass[12pt,a4paper]{report}
 
-Le module \texttt{input.c} regroupe les composants de saisie. Il encapsule trois widgets principaux : l'entrée de texte, la liste déroulante moderne et le bouton numérique à incréments.
+% --- PACKAGES ---
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{geometry}
 
-\subsection{Fonction \texttt{create\_entry}}
+\geometry{margin=2.5cm}
 
-Cette fonction prépare un \texttt{GtkEntry} puis applique le placeholder, le texte initial, le type de saisie attendu et les éventuelles contraintes de visibilité ou de longueur.
+% --- COULEURS ---
+\definecolor{input-orange}{rgb}{0.9, 0.4, 0.0}
+\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
 
-\begin{lstlisting}[language=C]
-GtkWidget *create_entry(const entry_config *config) {
-    GtkWidget *entry = gtk_entry_new();
+% --- STYLE DES BOITES (Design corrigé pour Yahya) ---
+\newtcolorbox{inputbox}[1]{
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    colback=white,
+    colframe=input-orange,
+    fonttitle=\bfseries,
+    colbacktitle=input-orange,
+    title=#1,
+    boxed title style={size=small, sharp corners},
+    drop shadow,
+    bottom=2mm
+}
 
-    if (config == NULL) {
-        return entry;
-    }
+% --- CONFIGURATION C ---
+\lstset{
+    language=C,
+    backgroundcolor=\color{code-bg},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{purple},
+    breaklines=true,
+    frame=none,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
 
-    if (config->placeholder) {
-        gtk_entry_set_placeholder_text(GTK_ENTRY(entry), config->placeholder);
-    }
-    if (config->default_text) {
-        gtk_editable_set_text(GTK_EDITABLE(entry), config->default_text);
-    }
-    gtk_entry_set_input_purpose(GTK_ENTRY(entry), parse_input_purpose(config->purpose_hint));
-    gtk_entry_set_visibility(GTK_ENTRY(entry), !config->password);
-    gtk_editable_set_editable(GTK_EDITABLE(entry), config->editable);
-    if (config->max_length > 0) {
-        gtk_entry_set_max_length(GTK_ENTRY(entry), config->max_length);
-    }
-    apply_widget_style(entry, &config->style);
+\begin{document}
 
-    if (config->on_changed) {
-        g_signal_connect(entry, "changed", G_CALLBACK(config->on_changed), config->user_data);
-    }
+\chapter{Module de Saisie Utilisateur (Inputs)}
 
-    return entry;
+\section{Introduction}
+Ce module est le pont entre l'utilisateur et la logique de notre planificateur de transport. Il regroupe les champs de texte (\textit{Entries}), les listes déroulantes (\textit{Drop-downs}) et les sélecteurs numériques (\textit{Spin Buttons}). Ces composants valident et transmettent les données saisies à notre application.
+
+\section{Structures et Définitions (Header)}
+
+\begin{inputbox}{Structure : entry\_config}
+La structure \texttt{entry\_config} définit le comportement des champs de saisie. Elle supporte le masquage des caractères (pour les mots de passe) et des indices visuels (\textit{placeholders}).
+\end{inputbox}
+
+\begin{lstlisting}
+typedef struct {
+    const char *placeholder;
+    const char *default_text;
+    const char *purpose_hint;
+    bool password;
+    bool editable;
+    int max_length;
+    widget_style_config style;
+    void (*on_changed)(GtkEditable *editable, gpointer user_data);
+    gpointer user_data;
+} entry_config;
+\end{lstlisting}
+
+\section{Logique de Traitement (Source)}
+
+\begin{inputbox}{Analyse de l'Intention : parse\_input\_purpose}
+Cette fonction statique est une aide précieuse. Elle convertit une simple chaîne de caractères (ex: "email") en une énumération \texttt{GtkInputPurpose}. Cela permet d'adapter le clavier virtuel sur mobile ou de valider le format de saisie.
+\end{inputbox}
+
+\begin{lstlisting}
+static GtkInputPurpose parse_input_purpose(const char *hint) {
+    if (hint == NULL) return GTK_INPUT_PURPOSE_FREE_FORM;
+    if (strcmp(hint, "email") == 0) return GTK_INPUT_PURPOSE_EMAIL;
+    if (strcmp(hint, "number") == 0) return GTK_INPUT_PURPOSE_NUMBER;
+    // ... selection du type de saisie ...
+    return GTK_INPUT_PURPOSE_FREE_FORM;
 }
 \end{lstlisting}
 
-\subsection{Fonction \texttt{create\_dropdown}}
+\section{Composants de Sélection}
 
-\begin{lstlisting}[language=C]
+\begin{inputbox}{Fonction : create\_dropdown}
+Le \texttt{GtkDropDown} remplace l'ancienne \texttt{ComboBox}. Notre wrapper simplifie sa création à partir d'un tableau de chaînes de caractères et permet d'activer la recherche interne pour les listes longues (comme une liste de villes au Maroc).
+\end{inputbox}
+
+\begin{lstlisting}
 GtkWidget *create_dropdown(const dropdown_config *config) {
     GtkWidget *dropdown;
-
     if (config == NULL || config->options == NULL) {
         return gtk_drop_down_new(NULL, NULL);
     }
 
     dropdown = gtk_drop_down_new_from_strings(config->options);
-    gtk_drop_down_set_selected(GTK_DROP_DOWN(dropdown), config->selected_index);
     gtk_drop_down_set_enable_search(GTK_DROP_DOWN(dropdown), config->enable_search);
-    apply_widget_style(dropdown, &config->style);
-
+    
     if (config->on_selected) {
         g_signal_connect(dropdown, "notify::selected", G_CALLBACK(config->on_selected), config->user_data);
     }
 
+    apply_widget_style(dropdown, &config->style);
     return dropdown;
 }
 \end{lstlisting}
 
-\subsection{Fonction \texttt{create\_spin\_button}}
+\section{Ajustements Numériques}
 
-\begin{lstlisting}[language=C]
+\begin{inputbox}{Fonction : create\_spin\_button}
+Idéal pour choisir le nombre de passagers ou l'heure, le \texttt{SpinButton} utilise un \texttt{GtkAdjustment} pour définir ses bornes. 
+On définit la valeur actuelle $v$, le minimum $v_{min}$ et le maximum $v_{max}$.
+\end{inputbox}
+
+\begin{lstlisting}
 GtkWidget *create_spin_button(const spin_button_config *config) {
     GtkAdjustment *adj;
-    GtkWidget *spin;
-
-    if (config == NULL) {
-        adj = gtk_adjustment_new(0.0, 0.0, 100.0, 1.0, 5.0, 0.0);
-        return gtk_spin_button_new(adj, 1.0, 0);
-    }
-
     adj = gtk_adjustment_new(config->value, config->min_value, config->max_value, config->step, config->page, 0.0);
-    spin = gtk_spin_button_new(adj, config->step, config->digits);
-    gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(spin), config->numeric_only);
-    gtk_spin_button_set_wrap(GTK_SPIN_BUTTON(spin), config->wrap);
+    GtkWidget *spin = gtk_spin_button_new(adj, config->step, config->digits);
+    
     apply_widget_style(spin, &config->style);
-
-    if (config->on_value_changed) {
-        g_signal_connect(spin, "value-changed", G_CALLBACK(config->on_value_changed), config->user_data);
-    }
-
     return spin;
 }
 \end{lstlisting}
 
-\subsection{APIs GTK utilisées}
-
-\begin{itemize}
-    \item \textbf{\texttt{gtk\_entry\_set\_placeholder\_text()}} : Affiche un message d'incitation à l'intérieur du champ de saisie tant que celui-ci est vide. Le module l'utilise pour fournir des indications contextuelles à l'utilisateur sans encombrer l'interface avec des labels externes.
-    \item \textbf{\texttt{gtk\_entry\_set\_input\_purpose()}} : Indique la nature des données attendues (URL, email, chiffres, etc.) pour optimiser le comportement des méthodes de saisie, comme le clavier virtuel sur mobile. Le wrapper l'utilise pour améliorer l'ergonomie des formulaires.
-    \item \textbf{\texttt{gtk\_drop\_down\_new\_from\_strings()}} : Construit une liste déroulante moderne en utilisant un tableau de chaînes de caractères pour les options. Cette API simplifie grandement la création de menus de sélection dans le module par rapport aux anciens widgets GTK.
-    \item \textbf{\texttt{gtk\_drop\_down\_set\_enable\_search()}} : Permet d'intégrer une barre de filtrage rapide à l'intérieur du menu déroulant. Le wrapper active cette fonctionnalité pour faciliter la sélection lorsque le nombre d'options devient important.
-    \item \textbf{\texttt{gtk\_adjustment\_new()}} : Définit un modèle de données numérique spécifiant une valeur courante, des bornes minimale et maximale, ainsi que des pas de progression. Elle constitue la fondation logique du widget \texttt{GtkSpinButton} créé par le module.
-    \item \textbf{\texttt{gtk\_spin\_button\_new()}} : Crée le widget de contrôle numérique lié à un ajustement. Elle permet à l'utilisateur de saisir ou d'incrémenter précisément une valeur numérique dans les limites définies par le wrapper.
-\end{itemize}
-
-\newpage
+\end{document}
