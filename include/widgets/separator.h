@@ -10,6 +10,11 @@ typedef struct {
     widget_style_config style;
 } separator_config;
 
+#define SEPARATOR_CONFIG_DEFAULT ((separator_config){ \
+    .orientation = GTK_ORIENTATION_HORIZONTAL, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
+
 GtkWidget *create_separator(const separator_config *config);
 
 #endif

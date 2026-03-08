@@ -14,12 +14,27 @@ typedef struct {
     widget_style_config style;
 } grid_config;
 
+#define GRID_CONFIG_DEFAULT ((grid_config){ \
+    .column_spacing = 0, \
+    .row_spacing = 0, \
+    .homogeneous_columns = false, \
+    .homogeneous_rows = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
+
 typedef struct {
     GtkOrientation orientation;
     int spacing;
     bool homogeneous;
     widget_style_config style;
 } box_config;
+
+#define BOX_CONFIG_DEFAULT ((box_config){ \
+    .orientation = GTK_ORIENTATION_VERTICAL, \
+    .spacing = 0, \
+    .homogeneous = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
 
 typedef struct {
     GtkStackTransitionType transition;
@@ -28,6 +43,14 @@ typedef struct {
     bool hhomogeneous;
     widget_style_config style;
 } stack_config;
+
+#define STACK_CONFIG_DEFAULT ((stack_config){ \
+    .transition = GTK_STACK_TRANSITION_TYPE_NONE, \
+    .duration_ms = 200, \
+    .vhomogeneous = false, \
+    .hhomogeneous = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
 
 GtkWidget *create_grid(const grid_config *config);
 GtkWidget *create_box(const box_config *config);

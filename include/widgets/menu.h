@@ -32,11 +32,27 @@ struct menu_item_config {
     gpointer user_data;
 };
 
+#define MENU_ITEM_CONFIG_DEFAULT ((menu_item_config){ \
+    .label = NULL, \
+    .kind = MENU_ITEM_ACTION, \
+    .children = NULL, \
+    .child_count = 0, \
+    .enabled = true, \
+    .on_activate = NULL, \
+    .user_data = NULL, \
+})
+
 typedef struct {
     const char *label;
     const menu_item_config *items;
     size_t item_count;
 } menu_section_config;
+
+#define MENU_SECTION_CONFIG_DEFAULT ((menu_section_config){ \
+    .label = NULL, \
+    .items = NULL, \
+    .item_count = 0, \
+})
 
 typedef struct {
     const menu_section_config *sections;
@@ -46,6 +62,15 @@ typedef struct {
     bool show_arrow_indicators;
     widget_style_config style;
 } menubar_config;
+
+#define MENUBAR_CONFIG_DEFAULT ((menubar_config){ \
+    .sections = NULL, \
+    .section_count = 0, \
+    .action_map = NULL, \
+    .layout = MENU_LAYOUT_HORIZONTAL, \
+    .show_arrow_indicators = true, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
 
 GtkWidget *create_menubar(const menubar_config *config);
 GtkWidget *create_menu_panel(const menubar_config *config);

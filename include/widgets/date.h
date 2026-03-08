@@ -16,6 +16,16 @@ typedef struct {
     gpointer user_data;
 } calendar_config;
 
+#define CALENDAR_CONFIG_DEFAULT ((calendar_config){ \
+    .selected_date = NULL, \
+    .show_day_names = true, \
+    .show_week_numbers = false, \
+    .no_month_change = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+    .on_day_selected = NULL, \
+    .user_data = NULL, \
+})
+
 GtkWidget *create_calendar(const calendar_config *config);
 
 #endif

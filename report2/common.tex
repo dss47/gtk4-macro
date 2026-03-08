@@ -55,6 +55,46 @@ void apply_widget_style(GtkWidget *widget, const widget_style_config *style) {
 }
 \end{lstlisting}
 
+\subsection{Macros d'initialisation par défaut (\texttt{\_CONFIG\_DEFAULT})}
+
+Le wrapper expose désormais des macros d'initialisation par défaut dans les en-têtes (dossier \texttt{include/widgets/}).
+Leur objectif est de fournir une configuration \og sûre \fg{} et lisible, sans dépendre d'un \texttt{\{0\}} implicite, puis de ne surcharger que les champs utiles.
+
+Le style commun utilise :
+\begin{itemize}
+    \item \texttt{WIDGET\_STYLE\_CONFIG\_DEFAULT} (\texttt{include/widgets/common.h})
+\end{itemize}
+
+Chaque widget possédant une structure \texttt{*\_config} dispose d'une macro \texttt{*\_CONFIG\_DEFAULT} correspondante. Exemples principaux :
+\begin{itemize}
+    \item \texttt{BUTTON\_CONFIG\_DEFAULT}, \texttt{RADIO\_BUTTON\_CONFIG\_DEFAULT} (\texttt{include/widgets/button.h})
+    \item \texttt{GRID\_CONFIG\_DEFAULT}, \texttt{BOX\_CONFIG\_DEFAULT}, \texttt{STACK\_CONFIG\_DEFAULT} (\texttt{include/widgets/container.h})
+    \item \texttt{ENTRY\_CONFIG\_DEFAULT}, \texttt{DROPDOWN\_CONFIG\_DEFAULT}, \texttt{SPIN\_BUTTON\_CONFIG\_DEFAULT} (\texttt{include/widgets/input.h})
+    \item \texttt{CHECKBOX\_CONFIG\_DEFAULT}, \texttt{SWITCH\_CONFIG\_DEFAULT} (\texttt{include/widgets/toggle.h})
+    \item \texttt{PROGRESS\_BAR\_CONFIG\_DEFAULT}, \texttt{SPINNER\_CONFIG\_DEFAULT}, \texttt{LABEL\_CONFIG\_DEFAULT}, \texttt{IMAGE\_CONFIG\_DEFAULT} (\texttt{include/widgets/display.h})
+    \item \texttt{CALENDAR\_CONFIG\_DEFAULT} (\texttt{include/widgets/date.h})
+    \item \texttt{SEPARATOR\_CONFIG\_DEFAULT} (\texttt{include/widgets/separator.h})
+    \item \texttt{MENU\_ITEM\_CONFIG\_DEFAULT}, \texttt{MENU\_SECTION\_CONFIG\_DEFAULT}, \texttt{MENUBAR\_CONFIG\_DEFAULT} (\texttt{include/widgets/menu.h})
+    \item \texttt{WINDOW\_CONFIG\_DEFAULT} (\texttt{include/widgets/window.h})
+    \item \texttt{ALERT\_BUTTON\_CONFIG\_DEFAULT}, \texttt{ALERT\_DIALOG\_CONFIG\_DEFAULT} (\texttt{include/widgets/dialog.h})
+\end{itemize}
+
+\paragraph{Exemple d'utilisation}
+
+\begin{lstlisting}[language=C]
+button_config cfg = BUTTON_CONFIG_DEFAULT;
+cfg.label = "_Save";
+cfg.use_underline = true;
+cfg.theme_variant = "primary";
+cfg.icon_name = "document-save-symbolic";
+
+cfg.style = WIDGET_STYLE_CONFIG_DEFAULT;
+cfg.style.width_request = 180;
+cfg.style.height_request = 38;
+
+GtkWidget *btn = create_button(&cfg);
+\end{lstlisting}
+
 \subsection{APIs GTK utilisées}
 
 \begin{itemize}

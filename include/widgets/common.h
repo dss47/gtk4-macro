@@ -28,6 +28,12 @@ typedef struct {
     const char *tooltip;
 } widget_style_config;
 
+// Default initializer for widget style configs.
+// Usage:
+//   widget_style_config style = WIDGET_STYLE_CONFIG_DEFAULT;
+//   style.margin_top = 12;
+#define WIDGET_STYLE_CONFIG_DEFAULT ((widget_style_config){0})
+
 void apply_widget_style(GtkWidget *widget, const widget_style_config *style);
 
 #endif
