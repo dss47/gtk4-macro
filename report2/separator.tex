@@ -1,92 +1,29 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{separator}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{separator} crée une séparation visuelle horizontale ou verticale entre zones d'interface.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{sep-gray}{rgb}{0.4, 0.4, 0.4}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
-
-% --- STYLE DES BOITES (Design corrigé pour Yahya) ---
-\newtcolorbox{sepbox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=sep-gray,
-    fonttitle=\bfseries,
-    colbacktitle=sep-gray,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
-
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
-
-\begin{document}
-
-\chapter{Module de Séparation Visuelle (Separators)}
-
-\section{Introduction}
-L'organisation visuelle est primordiale pour guider l'œil de l'utilisateur. Le module \texttt{separator} permet d'insérer des lignes de démarcation horizontales ou verticales entre les différents blocs de notre application de transport.
-
-\section{Définition de la Configuration}
-
-\begin{sepbox}{Structure : separator\_config}
-Cette structure simple permet de définir l'orientation de la ligne de séparation. Elle hérite également du style commun via \texttt{widget\_style\_config}.
-\end{sepbox}
-
-\begin{lstlisting}
-typedef struct {
-    GtkOrientation orientation;
-    widget_style_config style;
-} separator_config;
-\end{lstlisting}
-
-\section{Macro d'Initialisation par Défaut}
-
-\begin{sepbox}{Macro : SEPARATOR\_CONFIG\_DEFAULT}
-Par défaut, le séparateur est configuré en mode horizontal ($GTK\_ORIENTATION\_HORIZONTAL$), ce qui est le cas d'utilisation le plus fréquent pour séparer des sections de texte ou des boutons.
-\end{sepbox}
-
-\begin{lstlisting}
+\begin{docbox}{Macro \texttt{SEPARATOR\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
 #define SEPARATOR_CONFIG_DEFAULT ((separator_config){ \
     .orientation = GTK_ORIENTATION_HORIZONTAL, \
     .style = WIDGET_STYLE_CONFIG_DEFAULT, \
 })
 \end{lstlisting}
+\end{docbox}
 
-\section{Implémentation de la Création}
+Cette macro initialise un séparateur prêt à l'emploi dans le cas le plus fréquent (horizontal). Elle évite d'avoir une orientation non définie au moment du rendu. La valeur de style par défaut garantit aussi une application cohérente du thème.
 
-\begin{sepbox}{Fonction : create\_separator}
-La fonction vérifie si une configuration est fournie. Si c'est le cas, elle crée le widget avec l'orientation demandée et applique le style personnalisé.
-\end{sepbox}
+Même pour un composant simple, une initialisation explicite reste importante: elle supprime les ambiguïtés d'affichage et évite des anomalies d'orientation dans des layouts complexes.
 
-\begin{lstlisting}
+\subsection{Fonctions API}
+
+\begin{lstlisting}[language=C]
 GtkWidget *create_separator(const separator_config *config) {
-    GtkWidget *separator = gtk_separator_new(config ? 
-        config->orientation : GTK_ORIENTATION_HORIZONTAL);
-    
+    GtkWidget *separator = gtk_separator_new(
+        config ? config->orientation : GTK_ORIENTATION_HORIZONTAL
+    );
     if (config != NULL) {
         apply_widget_style(separator, &config->style);
     }
@@ -94,4 +31,8 @@ GtkWidget *create_separator(const separator_config *config) {
 }
 \end{lstlisting}
 
-\end{document}
+La fonction conserve un comportement stable même sans configuration explicite.
+
+Elle constitue un bon exemple de wrapper minimal: une API courte, des valeurs par défaut robustes et un point unique de personnalisation via \texttt{apply\_widget\_style}.
+
+\newpage

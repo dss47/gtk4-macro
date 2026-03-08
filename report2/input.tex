@@ -1,132 +1,79 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{input}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{input} encapsule les widgets de saisie utilisateur: champ texte, liste déroulante et spin button.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{input-orange}{rgb}{0.9, 0.4, 0.0}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
+\begin{docbox}{Macros \texttt{ENTRY\_CONFIG\_DEFAULT}, \texttt{DROPDOWN\_CONFIG\_DEFAULT}, \texttt{SPIN\_BUTTON\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
+#define ENTRY_CONFIG_DEFAULT ((entry_config){ \
+    .placeholder = NULL, \
+    .default_text = NULL, \
+    .purpose_hint = NULL, \
+    .password = false, \
+    .editable = true, \
+    .max_length = 0, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+    .on_changed = NULL, \
+    .user_data = NULL, \
+})
 
-% --- STYLE DES BOITES (Design corrigé pour Yahya) ---
-\newtcolorbox{inputbox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=input-orange,
-    fonttitle=\bfseries,
-    colbacktitle=input-orange,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
+#define DROPDOWN_CONFIG_DEFAULT ((dropdown_config){ \
+    .options = NULL, \
+    .selected_index = 0, \
+    .enable_search = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+    .on_selected = NULL, \
+    .user_data = NULL, \
+})
 
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
-
-\begin{document}
-
-\chapter{Module de Saisie Utilisateur (Inputs)}
-
-\section{Introduction}
-Ce module est le pont entre l'utilisateur et la logique de notre planificateur de transport. Il regroupe les champs de texte (\textit{Entries}), les listes déroulantes (\textit{Drop-downs}) et les sélecteurs numériques (\textit{Spin Buttons}). Ces composants valident et transmettent les données saisies à notre application.
-
-\section{Structures et Définitions (Header)}
-
-\begin{inputbox}{Structure : entry\_config}
-La structure \texttt{entry\_config} définit le comportement des champs de saisie. Elle supporte le masquage des caractères (pour les mots de passe) et des indices visuels (\textit{placeholders}).
-\end{inputbox}
-
-\begin{lstlisting}
-typedef struct {
-    const char *placeholder;
-    const char *default_text;
-    const char *purpose_hint;
-    bool password;
-    bool editable;
-    int max_length;
-    widget_style_config style;
-    void (*on_changed)(GtkEditable *editable, gpointer user_data);
-    gpointer user_data;
-} entry_config;
+#define SPIN_BUTTON_CONFIG_DEFAULT ((spin_button_config){ \
+    .min_value = 0.0, \
+    .max_value = 100.0, \
+    .step = 1.0, \
+    .page = 5.0, \
+    .value = 0.0, \
+    .digits = 0, \
+    .numeric_only = false, \
+    .wrap = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+    .on_value_changed = NULL, \
+    .user_data = NULL, \
+})
 \end{lstlisting}
+\end{docbox}
 
-\section{Logique de Traitement (Source)}
+Ces macros fixent une base stable pour les champs de saisie et évitent les paramètres incohérents. Les callbacks nuls et pointeurs \texttt{NULL} empêchent des appels invalides au runtime. C'est une protection simple mais efficace contre les segfaults en C.
 
-\begin{inputbox}{Analyse de l'Intention : parse\_input\_purpose}
-Cette fonction statique est une aide précieuse. Elle convertit une simple chaîne de caractères (ex: "email") en une énumération \texttt{GtkInputPurpose}. Cela permet d'adapter le clavier virtuel sur mobile ou de valider le format de saisie.
-\end{inputbox}
+L'initialisation par macros rend aussi le comportement de saisie reproductible entre écrans: même valeur par défaut, même politique de validation, même branchement des événements. Cela simplifie les tests et la maintenance.
 
-\begin{lstlisting}
-static GtkInputPurpose parse_input_purpose(const char *hint) {
-    if (hint == NULL) return GTK_INPUT_PURPOSE_FREE_FORM;
-    if (strcmp(hint, "email") == 0) return GTK_INPUT_PURPOSE_EMAIL;
-    if (strcmp(hint, "number") == 0) return GTK_INPUT_PURPOSE_NUMBER;
-    // ... selection du type de saisie ...
-    return GTK_INPUT_PURPOSE_FREE_FORM;
-}
-\end{lstlisting}
+\subsection{Fonctions API}
 
-\section{Composants de Sélection}
+\begin{lstlisting}[language=C]
+GtkWidget *create_entry(const entry_config *config) {
+    GtkWidget *entry = gtk_entry_new();
+    if (config == NULL) return entry;
 
-\begin{inputbox}{Fonction : create\_dropdown}
-Le \texttt{GtkDropDown} remplace l'ancienne \texttt{ComboBox}. Notre wrapper simplifie sa création à partir d'un tableau de chaînes de caractères et permet d'activer la recherche interne pour les listes longues (comme une liste de villes au Maroc).
-\end{inputbox}
-
-\begin{lstlisting}
-GtkWidget *create_dropdown(const dropdown_config *config) {
-    GtkWidget *dropdown;
-    if (config == NULL || config->options == NULL) {
-        return gtk_drop_down_new(NULL, NULL);
+    if (config->placeholder) {
+        gtk_entry_set_placeholder_text(GTK_ENTRY(entry), config->placeholder);
+    }
+    if (config->default_text) {
+        gtk_editable_set_text(GTK_EDITABLE(entry), config->default_text);
     }
 
-    dropdown = gtk_drop_down_new_from_strings(config->options);
-    gtk_drop_down_set_enable_search(GTK_DROP_DOWN(dropdown), config->enable_search);
-    
-    if (config->on_selected) {
-        g_signal_connect(dropdown, "notify::selected", G_CALLBACK(config->on_selected), config->user_data);
+    gtk_entry_set_visibility(GTK_ENTRY(entry), !config->password);
+    gtk_editable_set_editable(GTK_EDITABLE(entry), config->editable);
+    apply_widget_style(entry, &config->style);
+
+    if (config->on_changed) {
+        g_signal_connect(entry, "changed", G_CALLBACK(config->on_changed), config->user_data);
     }
-
-    apply_widget_style(dropdown, &config->style);
-    return dropdown;
+    return entry;
 }
 \end{lstlisting}
 
-\section{Ajustements Numériques}
+La logique de création sépare clairement la configuration visuelle, le comportement de saisie et la connexion des événements utilisateur.
 
-\begin{inputbox}{Fonction : create\_spin\_button}
-Idéal pour choisir le nombre de passagers ou l'heure, le \texttt{SpinButton} utilise un \texttt{GtkAdjustment} pour définir ses bornes. 
-On définit la valeur actuelle $v$, le minimum $v_{min}$ et le maximum $v_{max}$.
-\end{inputbox}
+Le module \texttt{input} formalise ainsi un flux de données propre: saisie utilisateur, transformation, puis notification via signal. Cette séparation est utile pour concevoir une interface robuste et évolutive.
 
-\begin{lstlisting}
-GtkWidget *create_spin_button(const spin_button_config *config) {
-    GtkAdjustment *adj;
-    adj = gtk_adjustment_new(config->value, config->min_value, config->max_value, config->step, config->page, 0.0);
-    GtkWidget *spin = gtk_spin_button_new(adj, config->step, config->digits);
-    
-    apply_widget_style(spin, &config->style);
-    return spin;
-}
-\end{lstlisting}
-
-\end{document}
+\newpage

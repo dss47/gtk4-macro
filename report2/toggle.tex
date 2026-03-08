@@ -1,121 +1,65 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{toggle}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{toggle} gère les contrôles binaires: case à cocher et interrupteur.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{toggle-cyan}{rgb}{0.0, 0.5, 0.6}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
+\begin{docbox}{Macros \texttt{CHECKBOX\_CONFIG\_DEFAULT} et \texttt{SWITCH\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
+#define CHECKBOX_CONFIG_DEFAULT ((checkbox_config){ \
+    .label = NULL, \
+    .active = false, \
+    .inconsistent = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+    .on_toggled = NULL, \
+    .user_data = NULL, \
+})
 
-% --- STYLE DES BOITES (Design anti-chevauchement) ---
-\newtcolorbox{togglebox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=toggle-cyan,
-    fonttitle=\bfseries,
-    colbacktitle=toggle-cyan,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
-
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
-
-\begin{document}
-
-\chapter{Module de Commutateurs (Toggles \& Switches)}
-
-\section{Introduction}
-Le module \texttt{toggle} gère les éléments d'interface permettant à l'utilisateur de basculer entre deux états. Nous implémentons deux types de contrôles :
-\begin{itemize}
-    \item \textbf{GtkCheckButton} : Idéal pour les formulaires de sélection multiple.
-    \item \textbf{GtkSwitch} : Utilisé pour les changements d'état immédiats (ex: activer le Wi-Fi ou un mode sombre).
-\end{itemize}
-
-\section{Définitions des Structures (Header)}
-
-\begin{togglebox}{Structure : checkbox\_config}
-Cette structure définit les propriétés d'une case à cocher, incluant son libellé et son état initial. L'état \texttt{inconsistent} permet de gérer les cas où la sélection est partielle (souvent utilisé dans les arborescences de fichiers).
-\end{togglebox}
-
-\begin{lstlisting}
-typedef struct {
-    const char *label;
-    bool active;
-    bool inconsistent;
-    widget_style_config style;
-    void (*on_toggled)(GtkCheckButton *button, gpointer user_data);
-    gpointer user_data;
-} checkbox_config;
+#define SWITCH_CONFIG_DEFAULT ((switch_config){ \
+    .label = NULL, \
+    .active = false, \
+    .state = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+    .on_active_changed = NULL, \
+    .user_data = NULL, \
+})
 \end{lstlisting}
+\end{docbox}
 
-\section{Logique d'Implémentation (Source)}
+Ces macros assurent une initialisation contrôlée des états booléens et des callbacks. En laissant \texttt{NULL} par défaut, on évite d'appeler des fonctions non initialisées. Cela limite les crashs lors des changements d'état.
 
-\begin{togglebox}{Fonction : create\_checkbox}
-La fonction initialise un \texttt{GtkCheckButton}. Si une fonction de rappel (\textit{callback}) est fournie, elle connecte le signal "toggled", permettant de réagir instantanément au clic de l'utilisateur.
-\end{togglebox}
+Dans une application interactive, cette discipline d'initialisation est critique: un état binaire mal initialisé peut produire une interface incohérente et des bugs difficiles à diagnostiquer. Les macros réduisent ce risque.
 
-\begin{lstlisting}
-GtkWidget *create_checkbox(const checkbox_config *config) {
-    GtkWidget *checkbox = gtk_check_button_new_with_label(config && config->label ? config->label : "");
-    if (config == NULL) return checkbox;
+\subsection{Fonctions API}
 
-    gtk_check_button_set_active(GTK_CHECK_BUTTON(checkbox), config->active);
-    apply_widget_style(checkbox, &config->style);
-
-    if (config->on_toggled != NULL) {
-        g_signal_connect(checkbox, "toggled", G_CALLBACK(config->on_toggled), config->user_data);
-    }
-    return checkbox;
-}
-\end{lstlisting}
-
-\section{Gestion des Interrupteurs en Ligne}
-
-
-
-\begin{togglebox}{Fonction : create\_switch\_row}
-Contrairement à la case à cocher simple, cette fonction crée une ligne complète (\texttt{GtkBox}) contenant un label à gauche et un interrupteur à droite. Cela garantit un alignement parfait dans les menus de paramètres.
-\end{togglebox}
-
-\begin{lstlisting}
+\begin{lstlisting}[language=C]
 GtkWidget *create_switch_row(const switch_config *config, GtkWidget **out_switch) {
     GtkWidget *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    GtkWidget *label = gtk_label_new(config && config->label ? config->label : "");
     GtkWidget *sw = gtk_switch_new();
-    
-    // Organisation spatiale
-    gtk_widget_set_hexpand(label, TRUE);
-    gtk_widget_set_halign(label, GTK_ALIGN_START);
-    
-    if (config->on_active_changed != NULL) {
-        g_signal_connect(sw, "notify::active", G_CALLBACK(config->on_active_changed), config->user_data);
+
+    gtk_box_append(GTK_BOX(row), label);
+    gtk_box_append(GTK_BOX(row), sw);
+
+    if (config != NULL) {
+        gtk_switch_set_active(GTK_SWITCH(sw), config->active);
+        gtk_switch_set_state(GTK_SWITCH(sw), config->state);
+        apply_widget_style(row, &config->style);
+
+        if (config->on_active_changed != NULL) {
+            g_signal_connect(sw, "notify::active", G_CALLBACK(config->on_active_changed), config->user_data);
+        }
     }
-    
-    if (out_switch != NULL) *out_switch = sw;
+
+    if (out_switch != NULL) {
+        *out_switch = sw;
+    }
     return row;
 }
 \end{lstlisting}
 
-\end{document}
+Le module fournit des composants simples à intégrer tout en conservant un raccordement événementiel explicite.
+
+\texttt{create\_switch\_row} encapsule la composition visuelle (label + switch) et la logique de notification. Le résultat est un composant réutilisable prêt à intégrer dans des formulaires de préférences.
+
+\newpage

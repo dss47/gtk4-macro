@@ -1,129 +1,75 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{display}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{display} gère les widgets d'affichage : progression, indicateur d'activité, texte et image.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{display-green}{rgb}{0.1, 0.5, 0.1}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
-
-% --- STYLE DES BOITES (Design corrigé pour Yahya) ---
-\newtcolorbox{displaybox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=display-green,
-    fonttitle=\bfseries,
-    colbacktitle=display-green,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
-
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
-
-\begin{document}
-
-\chapter{Module d'Affichage et Feedback (Display)}
-
-\section{Introduction}
-Le module d'affichage regroupe tous les widgets dits de "lecture seule". Ils permettent de présenter des informations textuelles, des indicateurs de progression ou des éléments graphiques (icônes et images) à l'utilisateur sans qu'il n'ait à interagir directement avec eux.
-
-\section{Composants de Texte et État (Header)}
-
-\begin{displaybox}{Structure : progress\_bar\_config}
-La barre de progression est indispensable pour les tâches de fond. Elle supporte un mode fractionné ($0.0$ à $1.0$) ou un mode "pulse" pour indiquer une activité sans durée définie.
-\end{displaybox}
-
-\begin{lstlisting}
-typedef struct {
-    double fraction;
-    const char *text;
-    GtkOrientation orientation;
-    bool show_text;
-    bool inverted;
-    bool pulse_once;
-    widget_style_config style;
-} progress_bar_config;
-
+\begin{docbox}{Macros \texttt{PROGRESS\_BAR\_CONFIG\_DEFAULT}, \texttt{SPINNER\_CONFIG\_DEFAULT}, \texttt{LABEL\_CONFIG\_DEFAULT}, \texttt{IMAGE\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
 #define PROGRESS_BAR_CONFIG_DEFAULT ((progress_bar_config){ \
     .fraction = 0.0, \
+    .text = NULL, \
     .orientation = GTK_ORIENTATION_HORIZONTAL, \
+    .show_text = false, \
+    .inverted = false, \
+    .pulse_once = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
+
+#define SPINNER_CONFIG_DEFAULT ((spinner_config){ \
+    .size = 0, \
+    .spinning = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
+
+#define LABEL_CONFIG_DEFAULT ((label_config){ \
+    .text = NULL, \
+    .selectable = false, \
+    .wrap = false, \
+    .ellipsize = PANGO_ELLIPSIZE_NONE, \
+    .max_width_chars = 0, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
+
+#define IMAGE_CONFIG_DEFAULT ((image_config){ \
+    .icon_name = NULL, \
+    .file_path = NULL, \
+    .pixel_size = 0, \
+    .keep_aspect = true, \
     .style = WIDGET_STYLE_CONFIG_DEFAULT, \
 })
 \end{lstlisting}
+\end{docbox}
 
-\begin{displaybox}{Structure : image\_config}
-Ce wrapper unifie deux widgets GTK différents : \texttt{GtkImage} pour les icônes système et \texttt{GtkPicture} pour les fichiers images externes, tout en gérant le respect du ratio d'aspect.
-\end{displaybox}
+Ces macros sécurisent l'initialisation des widgets d'affichage avec des valeurs neutres. Les pointeurs \texttt{NULL} empêchent les lectures de chaînes invalides, et les booléens explicites stabilisent le rendu par défaut. Cela limite les erreurs mémoire lors des premiers essais d'intégration.
 
-\begin{lstlisting}
-typedef struct {
-    const char *icon_name;
-    const char *file_path;
-    int pixel_size;
-    bool keep_aspect;
-    widget_style_config style;
-} image_config;
-\end{lstlisting}
+Les macros d'affichage permettent également de standardiser le comportement visuel entre modules: une image sans chemin reste valide, une barre de progression sans texte reste fonctionnelle. Cette robustesse évite des plantages lors de données incomplètes.
 
-\section{Logique de Création (Source)}
+\subsection{Fonctions API}
 
-\begin{displaybox}{Fonction : create\_label}
-Cette fonction simplifie la création de labels. Elle gère automatiquement le retour à la ligne (\textit{wrap}) et l'élision (\textit{ellipsize}) si le texte est trop long pour l'espace alloué.
-\end{displaybox}
+\begin{lstlisting}[language=C]
+GtkWidget *create_progress_bar(const progress_bar_config *config) {
+    GtkWidget *progress = gtk_progress_bar_new();
+    if (config == NULL) return progress;
 
-\begin{lstlisting}
-GtkWidget *create_label(const label_config *config) {
-    GtkWidget *label = gtk_label_new(config && config->text ? config->text : "");
-    if (config == NULL) return label;
-
-    gtk_label_set_selectable(GTK_LABEL(label), config->selectable);
-    gtk_label_set_wrap(GTK_LABEL(label), config->wrap);
-    
-    apply_widget_style(label, &config->style);
-    return label;
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), config->fraction);
+    gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(progress), config->show_text);
+    gtk_orientable_set_orientation(GTK_ORIENTABLE(progress), config->orientation);
+    if (config->text != NULL) {
+        gtk_progress_bar_set_text(GTK_PROGRESS_BAR(progress), config->text);
+    }
+    apply_widget_style(progress, &config->style);
+    return progress;
 }
-\end{lstlisting}
 
-\section{Gestion des Médias Visuels}
-
-
-
-\begin{displaybox}{Fonction : create\_image}
-La fonction fait un choix intelligent : si un chemin de fichier est fourni, elle utilise un \texttt{GtkPicture} (plus performant pour les photos). Sinon, elle utilise un \texttt{GtkImage} pour puiser dans le thème d'icônes du système.
-\end{displaybox}
-
-\begin{lstlisting}
 GtkWidget *create_image(const image_config *config) {
     GtkWidget *widget;
     if (config == NULL) return gtk_image_new();
 
     if (config->file_path != NULL && config->file_path[0] != '\0') {
         GtkWidget *pic = gtk_picture_new_for_filename(config->file_path);
-        gtk_picture_set_content_fit(pic, config->keep_aspect ? 
-            GTK_CONTENT_FIT_CONTAIN : GTK_CONTENT_FIT_FILL);
+        gtk_picture_set_content_fit(GTK_PICTURE(pic),
+            config->keep_aspect ? GTK_CONTENT_FIT_CONTAIN : GTK_CONTENT_FIT_FILL);
         widget = pic;
     } else {
         widget = gtk_image_new_from_icon_name(config->icon_name);
@@ -134,4 +80,8 @@ GtkWidget *create_image(const image_config *config) {
 }
 \end{lstlisting}
 
-\end{document}
+Le module choisit dynamiquement la meilleure représentation visuelle (icône système ou image fichier) en conservant une API homogène.
+
+La fonction \texttt{create\_image} illustre bien l'approche du wrapper: masquer la complexité GTK derrière une interface simple. Le code applicatif choisit seulement la source (fichier ou icône) et le module gère le reste.
+
+\newpage

@@ -1,80 +1,11 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{date}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{date} encapsule \texttt{GtkCalendar} pour la sélection de dates.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{calendar-red}{rgb}{0.8, 0.1, 0.1}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
-
-% --- STYLE DES BOITES (Design corrigé) ---
-\newtcolorbox{datebox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=calendar-red,
-    fonttitle=\bfseries,
-    colbacktitle=calendar-red,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
-
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
-
-\begin{document}
-
-\chapter{Module de Sélection de Date (Calendar)}
-
-\section{Introduction}
-Dans le cadre du projet de planificateur de transport intelligent au Maroc, l'utilisateur doit pouvoir sélectionner une date précise. Ce module encapsule le widget \texttt{GtkCalendar} pour offrir une interface de sélection intuitive et robuste.
-
-\section{Définition de la Configuration}
-
-\begin{datebox}{Structure : calendar\_config}
-Cette structure permet de configurer l'affichage du calendrier (noms des jours, numéros de semaines) et de définir une date sélectionnée par défaut via le type \texttt{GDateTime}.
-\end{datebox}
-
-\begin{lstlisting}
-typedef struct {
-    GDateTime *selected_date;
-    bool show_day_names;
-    bool show_week_numbers;
-    bool no_month_change;
-    widget_style_config style;
-    void (*on_day_selected)(GtkCalendar *calendar, gpointer user_data);
-    gpointer user_data;
-} calendar_config;
-\end{lstlisting}
-
-\section{Macro d'Initialisation}
-
-\begin{datebox}{Macro : CALENDAR\_CONFIG\_DEFAULT}
-Comme pour les autres modules, cette macro garantit que le calendrier s'affiche avec des paramètres standard (noms des jours activés, changement de mois autorisé) dès sa création.
-\end{datebox}
-
-\begin{lstlisting}
+\begin{docbox}{Macro \texttt{CALENDAR\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
 #define CALENDAR_CONFIG_DEFAULT ((calendar_config){ \
     .selected_date = NULL, \
     .show_day_names = true, \
@@ -85,19 +16,22 @@ Comme pour les autres modules, cette macro garantit que le calendrier s'affiche 
     .user_data = NULL, \
 })
 \end{lstlisting}
+\end{docbox}
 
-\section{Implémentation Technique}
+Cette macro initialise le calendrier dans un état standard et sûr. Les callbacks et données utilisateur sont nuls tant qu'ils ne sont pas explicitement fournis. Cela évite les appels invalides pendant la navigation calendrier.
 
-\begin{datebox}{Fonction : create\_calendar}
-Cette fonction instancie le calendrier. Elle utilise une directive de préprocesseur \texttt{\#if GTK\_CHECK\_VERSION} pour assurer la compatibilité entre les différentes versions de GTK4 (4.20+ vs versions antérieures).
-\end{datebox}
+L'usage d'une macro par défaut facilite aussi la compatibilité entre versions GTK: la configuration de base reste valide même si certains réglages évoluent. Cela protège le code de haut niveau contre des regressions.
 
-\begin{lstlisting}
+\subsection{Fonctions API}
+
+\begin{lstlisting}[language=C]
 GtkWidget *create_calendar(const calendar_config *config) {
     GtkWidget *calendar = gtk_calendar_new();
-    if (config == NULL) return calendar;
 
-    // Selection de la date avec gestion de version
+    if (config == NULL) {
+        return calendar;
+    }
+
     if (config->selected_date != NULL) {
 #if GTK_CHECK_VERSION(4, 20, 0)
         gtk_calendar_set_date(GTK_CALENDAR(calendar), config->selected_date);
@@ -105,15 +39,21 @@ GtkWidget *create_calendar(const calendar_config *config) {
         gtk_calendar_select_day(GTK_CALENDAR(calendar), config->selected_date);
 #endif
     }
-    
-    // Connexion du signal de selection
+
+    gtk_calendar_set_show_day_names(GTK_CALENDAR(calendar), config->show_day_names);
+    gtk_calendar_set_show_week_numbers(GTK_CALENDAR(calendar), config->show_week_numbers);
+    gtk_calendar_set_show_heading(GTK_CALENDAR(calendar), !config->no_month_change);
+
     if (config->on_day_selected != NULL) {
         g_signal_connect(calendar, "day-selected", G_CALLBACK(config->on_day_selected), config->user_data);
     }
 
-    apply_widget_style(calendar, &config->style);
     return calendar;
 }
 \end{lstlisting}
 
-\end{document}
+La fonction gère proprement la compatibilité GTK selon la version disponible.
+
+Elle centralise la sélection de date, la configuration d'affichage et le branchement du signal \texttt{day-selected}. Cette centralisation rend le comportement du widget calendrier plus prévisible dans toute l'application.
+
+\newpage

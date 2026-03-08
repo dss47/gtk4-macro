@@ -1,118 +1,65 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{menu}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{menu} construit des menus hiérarchiques et enregistre les actions GTK associées.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{menu-blue}{rgb}{0.1, 0.2, 0.4}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
+\begin{docbox}{Macros \texttt{MENU\_ITEM\_CONFIG\_DEFAULT}, \texttt{MENU\_SECTION\_CONFIG\_DEFAULT}, \texttt{MENUBAR\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
+#define MENU_ITEM_CONFIG_DEFAULT ((menu_item_config){ \
+    .label = NULL, \
+    .kind = MENU_ITEM_ACTION, \
+    .children = NULL, \
+    .child_count = 0, \
+    .enabled = true, \
+    .on_activate = NULL, \
+    .user_data = NULL, \
+})
 
-% --- STYLE DES BOITES (Design corrigé pour Yahya) ---
-\newtcolorbox{menubox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=menu-blue,
-    fonttitle=\bfseries,
-    colbacktitle=menu-blue,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
+#define MENU_SECTION_CONFIG_DEFAULT ((menu_section_config){ \
+    .label = NULL, \
+    .items = NULL, \
+    .item_count = 0, \
+})
 
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
-
-\begin{document}
-
-\chapter{Module Système de Menus (Menus \& Actions)}
-
-\section{Introduction}
-L'architecture de navigation est le pilier de l'expérience utilisateur. Dans notre application \textit{Smart Transport Scheduler}, ce module gère la création dynamique de barres de menus et de panneaux contextuels. Il repose sur le concept de \textbf{GActionMap} de la GLib pour lier les clics de menu à des fonctions C.
-
-\section{Architecture des Données (Header)}
-
-\begin{menubox}{Structure : menu\_item\_config}
-Pour gérer la récursivité (des menus dans des menus), la structure contient un pointeur vers ses propres enfants. L'énumération \texttt{kind} permet de distinguer une action simple, d'un sous-menu ou d'une section.
-\end{menubox}
-
-\begin{lstlisting}
-typedef struct menu_item_config menu_item_config;
-
-struct menu_item_config {
-    const char *label;
-    menu_item_kind kind;
-    const menu_item_config *children;
-    size_t child_count;
-    bool enabled;
-    menu_item_callback on_activate;
-    gpointer user_data;
-};
+#define MENUBAR_CONFIG_DEFAULT ((menubar_config){ \
+    .sections = NULL, \
+    .section_count = 0, \
+    .action_map = NULL, \
+    .layout = MENU_LAYOUT_HORIZONTAL, \
+    .show_arrow_indicators = true, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
 \end{lstlisting}
+\end{docbox}
 
-\section{Logique de Construction Récursive (Source)}
+Ces macros posent une base d'arbre de menu vide mais valide. Les compteurs à \texttt{0} et pointeurs \texttt{NULL} empêchent les parcours hors bornes et les déréférencements invalides. C'est particulièrement important dans ce module qui manipule la récursivité.
 
-\begin{menubox}{Algorithme : append\_item\_recursive}
-C'est la pièce maîtresse du module. Si un élément est de type \texttt{SUBMENU}, la fonction s'appelle elle-même pour construire le niveau inférieur. Cela permet de créer des menus d'une profondeur infinie de manière élégante.
-\end{menubox}
+Ces valeurs par défaut sont aussi essentielles pour stabiliser l'algorithme récursif de construction des sous-menus. Une initialisation partielle peut facilement provoquer des accès mémoire invalides; les macros réduisent ce risque.
 
-\begin{lstlisting}
-static void append_item_recursive(GMenu *menu, const menu_item_config *item, const menubar_config *config) {
-    if (item == NULL || item->enabled == false) return;
+\subsection{Fonctions API}
 
-    if (item->kind == MENU_ITEM_SUBMENU && item->children != NULL) {
-        GMenu *submenu = g_menu_new();
-        for (size_t i = 0; i < item->child_count; i++) {
-            append_item_recursive(submenu, &item->children[i], config);
-        }
-        g_menu_append_submenu(menu, item->label, G_MENU_MODEL(submenu));
-        g_object_unref(submenu);
-        return;
-    }
-    // ... suite de la logique d'action ...
-}
-\end{lstlisting}
-
-\section{Génération des Widgets}
-
-
-
-\begin{menubox}{Fonction : create\_menubar}
-Cette fonction transforme notre modèle logique en un widget \texttt{GtkPopoverMenuBar}. Elle sépare totalement la définition des menus (le "quoi") de leur affichage (le "comment"), respectant ainsi les principes du génie logiciel.
-\end{menubox}
-
-\begin{lstlisting}
+\begin{lstlisting}[language=C]
 GtkWidget *create_menubar(const menubar_config *config) {
     GMenuModel *model = build_menu_model(config);
     GtkWidget *bar = gtk_popover_menu_bar_new_from_model(model);
-    
     if (config != NULL) {
         apply_widget_style(bar, &config->style);
     }
-    
     g_object_unref(model);
     return bar;
 }
+
+GtkWidget *create_menu_panel(const menubar_config *config) {
+    GMenuModel *model = build_menu_model(config);
+    GtkWidget *panel = gtk_popover_menu_new_from_model(model);
+    g_object_unref(model);
+    return panel;
+}
 \end{lstlisting}
 
-\end{document}
+Le module sépare la description logique du menu (structures) de la génération GTK (\texttt{GMenuModel} + widgets).
+
+La fonction \texttt{create\_menubar} sert de point d'entrée unique: elle construit le modèle puis instancie le widget final. Cette séparation améliore la lisibilité et facilite l'ajout de nouvelles actions.
+
+\newpage

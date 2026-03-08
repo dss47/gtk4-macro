@@ -5,17 +5,14 @@
 \usepackage{hyperref}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{array}
+\usepackage[most]{tcolorbox}
 \usepackage[margin=2.5cm]{geometry}
 
-\definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
 \definecolor{keyword}{rgb}{0,0,1}
 \definecolor{string}{rgb}{0.58,0,0.82}
 \definecolor{comment}{rgb}{0.57,0.57,0.57}
-\definecolor{type}{rgb}{0.1,0.5,0.1}
 
 \lstdefinestyle{cstyle}{
     backgroundcolor=\color{backcolour},
@@ -48,29 +45,36 @@
         {’}{{'}}1
 }
 
+\newtcolorbox{docbox}[1]{
+    enhanced,
+    breakable,
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    boxed title style={size=small, sharp corners},
+    colback=white,
+    colframe=black!60,
+    fonttitle=\bfseries,
+    colbacktitle=black!70,
+    coltitle=white,
+    title={#1},
+    bottom=2mm
+}
+
 \lstset{style=cstyle}
 
-\title{Implémentation des Widgets GTK4 \\ Rapport Technique - Volume 2}
+\title{Documentation technique du wrapper GTK4 (Volume 2)}
 \author{Projet GTK Wrapper}
 \date{\today}
 
 \begin{document}
 
 \maketitle
-
 \tableofcontents
-
 \newpage
 
 \section{Introduction}
-Ce rapport documente l'implémentation interne du wrapper GTK4. Contrairement au premier volume, centré sur les structures de configuration et l'usage de l'API, ce second document décrit la logique des fonctions, les appels GTK réellement utilisés et les choix techniques effectués dans chaque module.
-
-Les extraits de code présentés ici sont basés sur l'implémentation réelle du projet. Les listings mettent l'accent sur les portions significatives (vérifications, branchements, gestion mémoire, raccordement des signaux) afin de conserver une lecture fluide dans le PDF.
-
-L'objectif de ce volume est donc double : (1) expliquer \emph{ce que fait} chaque fonction du wrapper et (2) expliciter \emph{comment} elle le fait, notamment en termes de compatibilité GTK, d'ownership GLib et de comportement par défaut lorsque la configuration est absente.
+Ce volume décrit l'implémentation des modules widgets du projet GTK4. Pour chaque module, on présente la configuration publique (macros et structures) puis la logique des fonctions API côté \texttt{.c}. L'objectif est de relier l'interface de programmation aux choix techniques de robustesse (valeurs par défaut, vérifications \texttt{NULL}, branchement des signaux).
 
 \newpage
-
 \input{window}
 \input{button}
 \input{common}
@@ -82,6 +86,7 @@ L'objectif de ce volume est donc double : (1) expliquer \emph{ce que fait} chaqu
 \input{menu}
 \input{dialog}
 \input{separator}
+\input{theme}
 \input{demo_app}
 
 \end{document}

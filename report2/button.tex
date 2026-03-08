@@ -1,101 +1,11 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{button}}
 
-% --- PACKAGES ESSENTIELS ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{amsmath}
-\usepackage{amsfonts}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{button} encapsule la création des boutons d'action et des boutons radio, avec options de style, icône et callbacks.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- CONFIGURATION DES COULEURS (Style VS Code) ---
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
-\definecolor{titleblue}{rgb}{0.1, 0.3, 0.6}
-
-% --- STYLE DES BOITES DE CODE (Correction du chevauchement) ---
-\newtcolorbox{codeblock}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=titleblue,
-    fonttitle=\bfseries,
-    colbacktitle=titleblue,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow
-}
-
-% --- CONFIGURATION LISTINGS ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{backcolour},   
-    commentstyle=\color{codegreen},
-    keywordstyle=\color{magenta},
-    numberstyle=\tiny\color{codegray},
-    stringstyle=\color{codepurple},
-    basicstyle=\ttfamily\footnotesize,
-    breaklines=true,                 
-    showstringspaces=false,
-    tabsize=4
-}
-
-\begin{document}
-
-% --- PAGE DE GARDE ---
-\begin{titlepage}
-    \centering
-    \vspace*{2cm}
-    {\Huge\bfseries Documentation Technique : Widgets GTK4\par}
-    \vspace{1cm}
-    {\Large Module de Gestion des Boutons\par}
-    \vfill
-    {\Large Présenté par : \textbf{Yahya}\par}
-    {\large Étudiant en première année de génie logiciel\par}
-    \vfill
-    {\large \today \par}
-\end{titlepage}
-
-\tableofcontents
-\newpage
-
-\chapter{Définitions et Structures (Header)}
-
-\section{Configuration des Boutons Standards}
-
-\begin{codeblock}{Structure : button\_config}
-La structure \texttt{button\_config} permet de centraliser tous les paramètres d'un bouton (label, icône, style, et signaux) en un seul objet. Cela rend le code plus modulaire.
-\end{codeblock}
-
-\begin{lstlisting}
-typedef struct {
-    const char *label;
-    const char *icon_name;
-    const char *theme_variant;
-    bool use_underline;
-    bool has_frame;
-    bool can_shrink;
-    int icon_size;
-    widget_style_config style;
-    void (*on_clicked)(GtkButton *button, gpointer user_data);
-    gpointer user_data;
-} button_config;
-\end{lstlisting}
-
-\section{Macros d'Initialisation par Défaut}
-
-\begin{codeblock}{Macro : BUTTON\_CONFIG\_DEFAULT}
-Cette macro est cruciale pour éviter les comportements indéfinis. Elle garantit que chaque champ est initialisé à une valeur sûre (souvent NULL ou false) avant d'être modifié.
-\end{codeblock}
-
-\begin{lstlisting}
+\begin{docbox}{Macros \texttt{BUTTON\_CONFIG\_DEFAULT} et \texttt{RADIO\_BUTTON\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
 #define BUTTON_CONFIG_DEFAULT ((button_config){ \
     .label = NULL, \
     .icon_name = NULL, \
@@ -108,47 +18,53 @@ Cette macro est cruciale pour éviter les comportements indéfinis. Elle garanti
     .on_clicked = NULL, \
     .user_data = NULL, \
 })
+
+#define RADIO_BUTTON_CONFIG_DEFAULT ((radio_button_config){ \
+    .label = NULL, \
+    .group_with = NULL, \
+    .is_active = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+    .on_toggled = NULL, \
+    .user_data = NULL, \
+})
 \end{lstlisting}
+\end{docbox}
 
-\chapter{Implémentation (Fichier Source)}
+Ces macros initialisent toutes les options dans un état prévisible. Les pointeurs \texttt{NULL} évitent les accès mémoire invalides, et les callbacks nuls empêchent les appels de fonction indéfinis. Cela réduit fortement les risques de segmentation fault dans les chemins de création.
 
-\section{Gestion des Thèmes}
+L'intérêt pratique est de pouvoir écrire un code d'assemblage très compact: on initialise avec la macro, puis on personnalise seulement le label, l'icône et le callback. Cette méthode diminue les oublis de champs et stabilise l'interface.
 
-L'application utilise des classes CSS personnalisées pour gérer l'apparence. La fonction statique suivante permet d'appliquer ces variantes.
+\subsection{Fonctions API}
 
-\begin{codeblock}{Fonction : apply\_theme\_variant}
-Elle vérifie la chaîne de caractères passée en paramètre et ajoute la classe CSS correspondante au widget GTK.
-\end{codeblock}
-
-\begin{lstlisting}
-static void apply_theme_variant(GtkWidget *button, const char *variant) {
-    if (variant == NULL || variant[0] == '\0') return;
-
-    if (strcmp(variant, "primary") == 0) {
-        gtk_widget_add_css_class(button, "btn-primary");
-    } else if (strcmp(variant, "success") == 0) {
-        gtk_widget_add_css_class(button, "btn-success");
-    } else if (strcmp(variant, "danger") == 0) {
-        gtk_widget_add_css_class(button, "btn-danger");
-    }
-}
-\end{lstlisting}
-
-\section{Création de Widgets}
-
-\begin{codeblock}{Fonction : create\_button}
-C'est le cœur du module. Elle instancie un \texttt{GtkButton}, configure son apparence, ajoute éventuellement une icône via une \texttt{GtkBox}, et connecte le signal "clicked" à la fonction de rappel (callback) fournie.
-\end{codeblock}
-
-\begin{lstlisting}
+\begin{lstlisting}[language=C]
 GtkWidget *create_button(const button_config *config) {
     GtkWidget *button;
-    // ... Logique d'initialisation GTK4 ...
+    const char *label;
+
+    if (config == NULL) {
+        return gtk_button_new();
+    }
+
+    label = config->label ? config->label : "";
+    button = config->use_underline ? gtk_button_new_with_mnemonic(label)
+                                   : gtk_button_new_with_label(label);
+
+    gtk_button_set_has_frame(GTK_BUTTON(button), config->has_frame);
+    gtk_button_set_can_shrink(GTK_BUTTON(button), config->can_shrink);
+
+    apply_theme_variant(button, config->theme_variant);
+    apply_widget_style(button, &config->style);
+
     if (config->on_clicked) {
         g_signal_connect(button, "clicked", G_CALLBACK(config->on_clicked), config->user_data);
     }
+
     return button;
 }
 \end{lstlisting}
 
-\end{document}
+La fonction construit un bouton utilisable même en cas de configuration partielle. Elle ajoute ensuite les options visuelles et connecte le callback si fourni.
+
+La fonction \texttt{create\_button} joue aussi un rôle d'adaptation entre des besoins métiers simples et l'API GTK plus verbeuse. En encapsulant les variantes de thème et le branchement du signal \texttt{clicked}, elle rend le code applicatif plus lisible.
+
+\newpage

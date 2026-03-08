@@ -1,79 +1,18 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{theme}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{theme} centralise l'application du thème CSS de démonstration.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{theme-teal}{rgb}{0.12, 0.55, 0.48}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
+\begin{docbox}{Aucune macro \texttt{\#define} de configuration publique}
+Le fichier d'en-tête \texttt{theme.h} expose uniquement la fonction \texttt{apply\_demo\_theme}. Il n'y a pas de structure \texttt{*\_config} ni de macro \texttt{*\_CONFIG\_DEFAULT} dans ce module.
+\end{docbox}
 
-% --- STYLE DES BOITES (Design sans chevauchement) ---
-\newtcolorbox{themebox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=theme-teal,
-    fonttitle=\bfseries,
-    colbacktitle=theme-teal,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
+Le module \texttt{theme} est volontairement centré sur le comportement global de rendu plutôt que sur des instances de configuration locales. Cette approche évite la dispersion des styles dans plusieurs composants.
 
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
+\subsection{Fonctions API}
 
-\begin{document}
-
-\chapter{Module de Gestion du Thème (CSS Customization)}
-
-\section{Introduction}
-L'apparence d'une application professionnelle ne se limite pas aux widgets standard. Pour notre projet, nous utilisons le moteur CSS de GTK4 pour injecter des styles personnalisés. Ce module permet de définir des dégradés et des couleurs spécifiques pour les boutons d'action (Primaire, Succès, Danger).
-
-\section{Interface du Module (Header)}
-
-\begin{themebox}{Fichier : theme.h}
-L'interface est minimaliste : une seule fonction publique permet d'activer le thème sur l'ensemble de l'application.
-\end{themebox}
-
-\begin{lstlisting}
-#ifndef GTK_WRAPPER_THEME_H
-#define GTK_WRAPPER_THEME_H
-
-#include <gtk/gtk.h>
-
-void apply_demo_theme(void);
-
-#endif
-\end{lstlisting}
-
-\section{Implémentation et Injection CSS}
-
-\begin{themebox}{Logique de Style : apply\_demo\_theme}
-Cette fonction crée un \texttt{GtkCssProvider}. Ce "fournisseur" de style lit une chaîne de caractères contenant du code CSS pur. Les classes définies ici (ex: \texttt{.btn-primary}) sont ensuite liées aux widgets via la fonction \texttt{gtk\_widget\_add\_css\_class}.
-\end{themebox}
-
-\begin{lstlisting}
+\begin{lstlisting}[language=C]
 void apply_demo_theme(void) {
     GtkCssProvider *provider = gtk_css_provider_new();
     const char *css =
@@ -81,8 +20,14 @@ void apply_demo_theme(void) {
         "  background: linear-gradient(180deg, #1f8c7a, #176b5e);"
         "  color: #ffffff;"
         "}"
-        // ... autres styles pour success et danger ...
-        ;
+        ".btn-success {"
+        "  background: linear-gradient(180deg, #3c8f28, #2f6f1f);"
+        "  color: #ffffff;"
+        "}"
+        ".btn-danger {"
+        "  background: linear-gradient(180deg, #b74040, #8e2f2f);"
+        "  color: #ffffff;"
+        "}";
 
     gtk_css_provider_load_from_string(provider, css);
     gtk_style_context_add_provider_for_display(
@@ -94,10 +39,8 @@ void apply_demo_theme(void) {
 }
 \end{lstlisting}
 
-\section{Détails des Dégradés Linéaires}
-Les boutons utilisent des dégradés pour un aspect plus moderne. En mathématiques, la transition de couleur suit un vecteur directionnel de $180^\circ$ :
-\[ \text{Couleur}_{\text{bouton}} = \text{lerp}(\text{Couleur}_{\text{haut}}, \text{Couleur}_{\text{bas}}, \text{position}_y) \]
+Ce module injecte des classes CSS applicatives, ensuite utilisées par les widgets (ex: boutons \texttt{primary/success/danger}).
 
+La fonction \texttt{apply\_demo\_theme} centralise les règles visuelles et garantit une cohérence graphique sur toute l'application. Elle réduit aussi le risque d'erreurs liées à des styles CSS dupliqués.
 
-
-\end{document}
+\newpage

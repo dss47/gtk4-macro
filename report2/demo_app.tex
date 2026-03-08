@@ -1,36 +1,45 @@
-\section{Module \texttt{demo\_app.c}}
+\section{Module \texttt{demo\_app}}
 
-Le module \texttt{demo\_app.c} fournit le point d'entrée public de l'application de démonstration. Il installe le thème, crée la fenêtre principale via le wrapper, puis injecte le contenu de la démo.
+Le module \texttt{demo\_app} assemble les widgets du projet et lance l'interface de démonstration.
 
-\subsection{Fonction \texttt{demo\_app\_start}}
+\subsection{Macros de Configuration}
+
+\begin{docbox}{Aucune macro de configuration dédiée dans \texttt{demo\_app.h}}
+Le header \texttt{demo\_app.h} expose uniquement la fonction de démarrage \texttt{demo\_app\_start}. Les configurations utilisées proviennent des modules widgets et de leurs macros \texttt{*\_CONFIG\_DEFAULT}.
+\end{docbox}
+
+Le rôle de ce module est d'orchestrer les configurations existantes plutôt que de définir de nouvelles macros. Il sert de point d'intégration pour démontrer l'usage combiné des composants.
+
+\subsection{Fonctions API}
 
 \begin{lstlisting}[language=C]
 void demo_app_start(GtkApplication *app, gpointer user_data) {
-  (void)user_data;
-  static bool once = false;
-  if (!once) {
-    apply_demo_theme();
-    once = true;
-  }
+    (void)user_data;
+    static bool once = false;
+    if (!once) {
+        apply_demo_theme();
+        once = true;
+    }
 
-  GtkWidget *window = create_window(app, &(window_config){
-      .title = "GTK UI Wrapper Showcasea",
-      .icon_name = "applications-development-symbolic",
-      .widget_name = "wrapper-window",
-      .background_image_path = NULL,
-      .default_width = 700,
-      .default_height = 300,
-      .min_width = 400,
-      .min_height = 300,
-      .present_on_create = false,
-  });
+    GtkWidget *window = create_window(app, &(window_config){
+        .title = "GTK UI Wrapper Showcasea",
+        .icon_name = "applications-development-symbolic",
+        .widget_name = "wrapper-window",
+        .background_image_path = NULL,
+        .default_width = 700,
+        .default_height = 300,
+        .present_on_create = false,
+    });
 
-  showcase_state *state = g_new0(showcase_state, 1);
-
-  gtk_window_set_child(GTK_WINDOW(window),
-                       build_showcase(app, GTK_WINDOW(window), state));
-  gtk_window_present(GTK_WINDOW(window));
+    showcase_state *state = g_new0(showcase_state, 1);
+    gtk_window_set_child(GTK_WINDOW(window),
+                         build_showcase(app, GTK_WINDOW(window), state));
+    gtk_window_present(GTK_WINDOW(window));
 }
 \end{lstlisting}
+
+Cette fonction initialise le thème une seule fois puis compose la fenêtre principale avec l'ensemble des pages de démonstration.
+
+\texttt{demo\_app\_start} est la passerelle entre l'initialisation applicative GTK et le système de widgets du projet. Elle montre un exemple complet de composition d'interface basé sur les wrappers.
 
 \newpage

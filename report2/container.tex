@@ -1,75 +1,11 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{container}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Le module \texttt{container} regroupe les conteneurs de mise en page : grille, boîte linéaire et pile de pages.
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{folder-orange}{rgb}{0.9, 0.6, 0.1}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
-
-% --- STYLE DES BOITES (Correction du chevauchement) ---
-\newtcolorbox{containerbox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=folder-orange,
-    fonttitle=\bfseries,
-    colbacktitle=folder-orange,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
-
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
-
-\begin{document}
-
-\chapter{Module de Gestion des Conteneurs}
-
-\section{Introduction}
-Dans ce module, nous gérons la disposition spatiale des éléments. Nous utilisons trois types de conteneurs principaux :
-\begin{itemize}
-    \item \textbf{GtkGrid} : Pour une organisation en tableau (lignes/colonnes).
-    \item \textbf{GtkBox} : Pour un empilement linéaire simple.
-    \item \textbf{GtkStack} : Pour gérer plusieurs pages dans une seule zone.
-\end{itemize}
-
-\section{Définitions des Configurations (Header)}
-
-\begin{containerbox}{Structure : grid\_config}
-La grille permet un alignement précis. Les options \texttt{homogeneous} permettent de forcer toutes les cellules à avoir la même taille, ce qui est utile pour les calculatrices ou les claviers numériques.
-\end{containerbox}
-
-\begin{lstlisting}
-typedef struct {
-    int column_spacing;
-    int row_spacing;
-    bool homogeneous_columns;
-    bool homogeneous_rows;
-    widget_style_config style;
-} grid_config;
-
+\begin{docbox}{Macros \texttt{GRID\_CONFIG\_DEFAULT}, \texttt{BOX\_CONFIG\_DEFAULT}, \texttt{STACK\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
 #define GRID_CONFIG_DEFAULT ((grid_config){ \
     .column_spacing = 0, \
     .row_spacing = 0, \
@@ -77,47 +13,55 @@ typedef struct {
     .homogeneous_rows = false, \
     .style = WIDGET_STYLE_CONFIG_DEFAULT, \
 })
+
+#define BOX_CONFIG_DEFAULT ((box_config){ \
+    .orientation = GTK_ORIENTATION_VERTICAL, \
+    .spacing = 0, \
+    .homogeneous = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
+
+#define STACK_CONFIG_DEFAULT ((stack_config){ \
+    .transition = GTK_STACK_TRANSITION_TYPE_NONE, \
+    .duration_ms = 200, \
+    .vhomogeneous = false, \
+    .hhomogeneous = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
 \end{lstlisting}
+\end{docbox}
 
-\section{Logique d'Implémentation (Source)}
+Ces macros garantissent des configurations minimales sûres et prévisibles. Elles évitent de laisser des paramètres de layout dans un état indéfini, ce qui simplifie le débogage de l'interface. Elles permettent aussi une initialisation rapide avant surcharge locale.
 
-\begin{containerbox}{Fonction : create\_box}
-La Box est le conteneur le plus utilisé. Ici, nous gérons dynamiquement l'orientation (verticale ou horizontale) et l'espacement entre les widgets enfants.
-\end{containerbox}
+En pratique, ces valeurs par défaut évitent les erreurs de mise en page (espacements incohérents, transition non souhaitée, orientation oubliée). Elles sécurisent le démarrage de l'interface dès les premiers prototypes.
 
-\begin{lstlisting}
-GtkWidget *create_box(const box_config *config) {
-    GtkWidget *box = gtk_box_new(
-        config ? config->orientation : GTK_ORIENTATION_VERTICAL,
-        config ? config->spacing : 0
-    );
-    if (config == NULL) return box;
+\subsection{Fonctions API}
 
-    gtk_box_set_homogeneous(GTK_BOX(box), config->homogeneous);
-    apply_widget_style(box, &config->style);
-    return box;
+\begin{lstlisting}[language=C]
+GtkWidget *create_grid(const grid_config *config) {
+    GtkWidget *grid = gtk_grid_new();
+    if (config == NULL) return grid;
+
+    gtk_grid_set_column_spacing(GTK_GRID(grid), config->column_spacing);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), config->row_spacing);
+    gtk_grid_set_column_homogeneous(GTK_GRID(grid), config->homogeneous_columns);
+    gtk_grid_set_row_homogeneous(GTK_GRID(grid), config->homogeneous_rows);
+    apply_widget_style(grid, &config->style);
+    return grid;
 }
-\end{lstlisting}
 
-\section{Gestion des Transitions (Stack)}
-Pour le \texttt{GtkStack}, la durée de transition $t$ est définie en millisecondes. Si l'on considère $n$ pages, la navigation fluide est assurée par :
-\[ \text{Transition}(p_i \rightarrow p_j) \text{ avec } \Delta t = \text{config->duration\_ms} \]
-
-\begin{containerbox}{Fonction : create\_stack}
-Le Stack est idéal pour les interfaces à onglets ou les assistants (wizards). Nous configurons le type de transition (glissement, fondu) et la durée.
-\end{containerbox}
-
-\begin{lstlisting}
 GtkWidget *create_stack(const stack_config *config) {
     GtkWidget *stack = gtk_stack_new();
     if (config == NULL) return stack;
 
     gtk_stack_set_transition_type(GTK_STACK(stack), config->transition);
     gtk_stack_set_transition_duration(GTK_STACK(stack), config->duration_ms);
-    // ... configuration de l'homogeneite ...
-    apply_widget_style(stack, &config->style);
     return stack;
 }
 \end{lstlisting}
 
-\end{document}
+La logique applique les propriétés seulement si \texttt{config} existe, ce qui protège le code appelant et facilite les usages simples.
+
+Le module \texttt{container} joue un rôle clé dans l'ergonomie globale: il encapsule la disposition des widgets et isole les détails GTK liés au layout. Cette séparation améliore la lisibilité du code applicatif.
+
+\newpage

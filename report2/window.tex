@@ -1,118 +1,74 @@
-\documentclass[12pt,a4paper]{report}
+\section{Module \texttt{window}}
 
-% --- PACKAGES ---
-\usepackage[french]{babel}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage[most]{tcolorbox}
-\usepackage{geometry}
+Ce module crée la fenêtre principale GTK et applique les propriétés de base (titre, taille, redimensionnement, modalité et style).
 
-\geometry{margin=2.5cm}
+\subsection{Macros de Configuration}
 
-% --- COULEURS ---
-\definecolor{window-navy}{rgb}{0.1, 0.1, 0.5}
-\definecolor{code-bg}{rgb}{0.98, 0.98, 0.98}
-
-% --- STYLE DES BOITES (Design anti-chevauchement pour Yahya) ---
-\newtcolorbox{winbox}[1]{
-    enhanced,
-    attach boxed title to top left={yshift=-2mm, xshift=2mm},
-    colback=white,
-    colframe=window-navy,
-    fonttitle=\bfseries,
-    colbacktitle=window-navy,
-    title=#1,
-    boxed title style={size=small, sharp corners},
-    drop shadow,
-    bottom=2mm
-}
-
-% --- CONFIGURATION C ---
-\lstset{
-    language=C,
-    backgroundcolor=\color{code-bg},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue},
-    commentstyle=\color{gray},
-    stringstyle=\color{purple},
-    breaklines=true,
-    frame=none,
-    numbers=left,
-    numberstyle=\tiny\color{gray}
-}
-
-\begin{document}
-
-\chapter{Gestion de la Fenêtre Principale (Windows)}
-
-\section{Introduction}
-La fenêtre est le composant racine de toute application GTK. Ce module permet de définir les propriétés fondamentales comme le titre, la taille par défaut et l'apparence visuelle (fond coloré ou image). Il utilise les capacités de \texttt{GtkApplicationWindow} pour une intégration parfaite dans l'environnement de bureau.
-
-\section{Configuration de la Fenêtre (Header)}
-
-\begin{winbox}{Structure : window\_config}
-La structure \texttt{window\_config} regroupe toutes les caractéristiques physiques de la fenêtre. Elle permet de définir si la fenêtre est redimensionnable ou modale, ainsi que ses contraintes de taille minimale et maximale.
-\end{winbox}
-
-\begin{lstlisting}
-typedef struct {
-    const char *title;
-    const char *icon_name;
-    const char *background_color;
-    const char *background_image_path;
-    int default_width;
-    int default_height;
-    bool resizable;
-    bool decorated;
-    bool modal;
-    widget_style_config style;
-} window_config;
+\begin{docbox}{Macro \texttt{WINDOW\_CONFIG\_DEFAULT}}
+\begin{lstlisting}[language=C]
+#define WINDOW_CONFIG_DEFAULT ((window_config){ \
+    .title = NULL, \
+    .icon_name = NULL, \
+    .widget_name = NULL, \
+    .background_color = NULL, \
+    .background_image_path = NULL, \
+    .default_width = -1, \
+    .default_height = -1, \
+    .min_width = 0, \
+    .min_height = 0, \
+    .max_width = 0, \
+    .max_height = 0, \
+    .resizable = true, \
+    .decorated = true, \
+    .modal = false, \
+    .maximized = false, \
+    .present_on_create = false, \
+    .style = WIDGET_STYLE_CONFIG_DEFAULT, \
+})
 \end{lstlisting}
+\end{docbox}
 
-\section{Logique de Personnalisation Visuelle}
+Cette macro fournit une configuration sûre avec des pointeurs initialisés à \texttt{NULL} et des booléens cohérents. Elle évite de lire des champs indéfinis au moment de la création de la fenêtre. En pratique, on part de cette base puis on surcharge uniquement les options nécessaires.
 
-\begin{winbox}{Fonction : apply\_window\_background}
-Cette fonction utilise un \texttt{GtkCssProvider} pour injecter du CSS dynamiquement. Elle permet de définir une couleur de fond ou une image de fond avec la propriété \texttt{background-size: cover}, garantissant que l'image remplit toute la fenêtre.
-\end{winbox}
+Cette initialisation par défaut est importante en C: sans valeurs explicites, certains champs peuvent contenir des données aléatoires en mémoire. En utilisant cette macro, on réduit les comportements non déterministes et les erreurs difficiles à reproduire.
 
-\begin{lstlisting}
-static void apply_window_background(const window_config *config, GtkWidget *window) {
-    // ... Verification des parametres ...
-    GtkCssProvider *provider = gtk_css_provider_new();
-    char *css = g_strdup_printf(
-        "window#%s { background-image: url('%s'); background-size: cover; }",
-        name, config->background_image_path
-    );
-    gtk_css_provider_load_from_string(provider, css);
-    // ... Application du style au display ...
-}
-\end{lstlisting}
+\subsection{Fonctions API}
 
-\section{Construction de la Fenêtre}
-
-Pour calculer la surface $S$ disponible à l'écran en fonction des dimensions par défaut $w$ et $h$, on utilise simplement :
-$$S = w \times h$$
-
-\begin{winbox}{Fonction : create\_window}
-C'est la fonction principale du module. Elle instancie la fenêtre liée à l'application et applique toutes les configurations (titre, icône, taille, et style CSS) avant de la présenter à l'écran.
-\end{winbox}
-
-\begin{lstlisting}
+\begin{lstlisting}[language=C]
 GtkWidget *create_window(GtkApplication *app, const window_config *config) {
     GtkWidget *window = gtk_application_window_new(app);
-    if (config == NULL) return window;
+    if (config == NULL) {
+        return window;
+    }
 
-    gtk_window_set_title(GTK_WINDOW(window), config->title);
+    if (config->title) {
+        gtk_window_set_title(GTK_WINDOW(window), config->title);
+    }
+    if (config->icon_name) {
+        gtk_window_set_icon_name(GTK_WINDOW(window), config->icon_name);
+    }
+
     gtk_window_set_default_size(GTK_WINDOW(window), config->default_width, config->default_height);
-    
+    gtk_window_set_resizable(GTK_WINDOW(window), config->resizable);
+    gtk_window_set_decorated(GTK_WINDOW(window), config->decorated);
+    gtk_window_set_modal(GTK_WINDOW(window), config->modal);
+
     apply_window_background(config, window);
     apply_widget_style(window, &config->style);
 
-    if (config->present_on_create) gtk_window_present(GTK_WINDOW(window));
+    if (config->maximized) {
+        gtk_window_maximize(GTK_WINDOW(window));
+    }
+    if (config->present_on_create) {
+        gtk_window_present(GTK_WINDOW(window));
+    }
+
     return window;
 }
 \end{lstlisting}
 
-\end{document}
+La fonction applique une stratégie défensive: toujours retourner un widget valide, puis enrichir selon la configuration. Cela simplifie l'appelant et réduit les cas d'erreur côté application.
+
+Le rôle de \texttt{create\_window} est aussi d'unifier la politique d'initialisation de la fenêtre: dimensions, état de présentation et style CSS sont traités au même endroit. Cette centralisation améliore la maintenabilité et évite de disperser des appels GTK critiques dans plusieurs fichiers.
+
+\newpage
